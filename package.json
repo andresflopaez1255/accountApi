@@ -14,6 +14,7 @@
   "scripts": {
     "build": "npm run clean && npm run lint && tsc",
     "start:dev": "PORT=5000 node dist/index.js",
+    "clean": "(rm -r ./.nyc_output || true) && (rm -r ./coverage || true) && (rm -r ./dist || true)",
     "dev": "PORT=5000 nodemon --exec ts-node src/index.ts --watch src"
     
   },
