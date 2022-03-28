@@ -24,6 +24,7 @@
     "lint": "eslint --ext .ts --fix src/**/*.ts test/**/*.ts",
     "preversion": "npm run build && npm run cover:check",
     "postversion": "git push && git push --tags",
+    "postinstall": "npm run build",
     "prepare": "npm run build",
     "test": "mocha",
     "upgrade": "npx npm-check -u",
