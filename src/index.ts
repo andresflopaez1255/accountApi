@@ -11,7 +11,7 @@ import 'dotenv/config'
 /* import { getAccountsWithDate } from './controllers/accounts.controllers';
  */const app:Express = express();
 
-const port = 3000;
+
 
 /** Logging */
 router.use(morgan('dev'));
@@ -42,7 +42,7 @@ app.get('/', (req, res) => {
 	res.send('hola...');
 });
 
-app.listen(port,()=>{
+app.listen(process.env.PORT,()=>{
 	console.log(`Example app listening on port ${port}`)
 })
 
