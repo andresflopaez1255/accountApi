@@ -12,23 +12,8 @@
   "license": "BSD-3-Clause",
   "main": "src/index.ts",
   "scripts": {
-    "build": "npm run clean && npm run lint && tsc",
-    "changelog": "conventional-changelog -p angular -u",
-    "changelog:update": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
-    "clean": "(rm -r ./.nyc_output || true) && (rm -r ./coverage || true) && (rm -r ./dist || true)",
-    "clean:all": "npm run clean && (rm -r ./node_modules || true)",
-    "cover": "nyc npm run test",
-    "dev": "nodemon src/index.ts",
-    "cover:check": "nyc --check-coverage npm run test",
-    "coveralls": "nyc report --reporter=text-lcov | coveralls",
-    "lint": "eslint --ext .ts --fix src/**/*.ts test/**/*.ts",
-    "preversion": "npm run build && npm run cover:check",
-    "postversion": "git push && git push --tags",
-    "postinstall": "npm run build",
-    "prepare": "npm run build",
-    "test": "mocha",
-    "upgrade": "npx npm-check -u",
-    "version": "npm run build && npm run changelog:update"
+    "build": "npm run clean && npm run lint && tsc"
+    
   },
   "devDependencies": {
     "@types/chai": "^4.1.6",
@@ -48,7 +33,7 @@
     "nyc": "^15.0.0",
     "prisma": "^3.11.0",
     "source-map-support": "^0.5.12",
-    "ts-node": "^10.0.0",
+    
     "typescript": "^4.0.3"
   },
   "config": {
@@ -67,6 +52,7 @@
     "node-cron": "^3.0.0",
     "nodemon": "^2.0.15",
     "sitka": "^1.0.5",
+    "ts-node": "^10.0.0",
     "twilio": "^3.75.1",
     "whatsapp-web.js": "^1.16.4"
   }
