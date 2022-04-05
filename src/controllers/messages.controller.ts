@@ -3,6 +3,7 @@ import { infoMessage } from '../Interfaces';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const sender = messagebird(process.env.TOKEN!)
+console.log(process.env.TOKEN)
 const sendMessage = (info:infoMessage) => {
 	const params = {
 		originator: 'TestMessage',
