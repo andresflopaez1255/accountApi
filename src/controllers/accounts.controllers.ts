@@ -3,15 +3,27 @@
 /* import { categories_account, Prisma, user } from '@prisma/client';
  */ import { Request, Response } from 'express';
 import moment from 'moment';
+import { infoMessage } from '../Interfaces';
 import prisma from '../utils/dbClient';
 import messageBody from '../utils/messageBody';
 import { MessagesAccounts } from '../utils/messages';
+import sendMessage from './messages.controller';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAllAccounts(
 	req: Request,
 	res: Response
 ): Promise<Response<any, Record<string, any>> | undefined> {
+	const result = await getAccountsWithDate()
+
+	if(result.length==0){
+		return
+	}
+	result.map((info:infoMessage)=>{
+		sendMessage(info)
+	})
+	
+	console.log(result)
 	try {
 		const allAccounts = await prisma.accounts.findMany();
 		const dataAccounts: any = [];
