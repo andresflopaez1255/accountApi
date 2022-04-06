@@ -46,7 +46,7 @@ app.listen(process.env.PORT,()=>{
 	console.log(`Example app listening on port ${process.env.PORT}`)
 })
 
-cron.schedule('08 19 * * *', async ()=>{
+cron.schedule('00 07 * * *', async ()=>{
 	const result = await getAccountsWithDate()
 
 	if(result.length==0){
