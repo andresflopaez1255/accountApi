@@ -123,3 +123,4 @@ This section is here as a reminder for you to explain to your users how to contr
 [dev-dependencies-url]: https://david-dm.org/chriswells0/node-typescript-template?type=dev
 [commitizen-image]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
 [commitizen-url]: http://commitizen.github.io/cz-cli
+# accountApi
