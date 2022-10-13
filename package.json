@@ -44,6 +44,10 @@
       "path": "./node_modules/cz-conventional-changelog"
     }
   },
+  "engines" : { 
+    "npm" : ">=8.0.0 <9.0.0",
+    "node" : "16.0.0 <17.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^3.11.0",
     "body-parser": "^1.19.2",
