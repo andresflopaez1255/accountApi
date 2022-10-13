@@ -46,7 +46,7 @@
   },
   "engines" : { 
     "npm" : "8.5.3",
-    "node" : "16.14.0"
+    "node" : "16.x"
   },
   "dependencies": {
     "@prisma/client": "^3.11.0",
