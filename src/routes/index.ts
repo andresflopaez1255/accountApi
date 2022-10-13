@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllAccounts } from '../controllers/accounts.controllers';
+import { addAccount, getAllAccounts } from '../controllers/accounts.controllers';
 import { getCategories } from '../controllers/categories.controllers';
 import {addUser, deleteUser, getUsers, updateUser } from '../controllers/users.controllers';
 import Routes from './routes.names';
@@ -16,5 +16,6 @@ router.delete(Routes.deleteUser, deleteUser);
 router.get(Routes.categories, getCategories);
 //accounts endpoints
 router.get(Routes.accounts, getAllAccounts);
+router.post(Routes.addAccount,jsonParser, addAccount)
 
 export default router;
