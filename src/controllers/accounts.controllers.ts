@@ -43,7 +43,7 @@ async function getAllAccounts(
 				category: categoryInfo?.category_name,
 			});
 		}
-
+		res.setHeader('Content-Type', 'application/json');
 		if (!dataAccounts.length) {
 			return res
 				.status(200)
@@ -113,13 +113,13 @@ async function getAccountsWithDate() {
 async function addAccount(req: Request, res: Response) {
 	const account = req.body;
 	try {
-		await prisma.accounts.create({
-			data: account,
-		}).catch(console.log);
-
+		await prisma.accounts
+			.create({
+				data: account,
+			})
+			.catch(console.log);
+		res.setHeader('Content-Type', 'application/json');
 		res.status(200).json(messageBody(null, MessagesAccounts.created, true));
-
-		res.status(202).json(messageBody(null, 'category if exist', false));
 	} catch (error) {
 		res.status(401).json(messageBody(error, MessagesAccounts.error, false));
 	}
@@ -147,7 +147,7 @@ async function deleteAccount(req: Request, res: Response) {
 				id: parseInt('' + req.query.id),
 			},
 		});
-
+		res.setHeader('Content-Type', 'application/json');
 		res.status(200).json(messageBody(result, MessagesAccounts.deleted, true));
 	} catch (error) {
 		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
