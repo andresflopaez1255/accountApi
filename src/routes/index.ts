@@ -17,5 +17,5 @@ router.get(Routes.categories, getCategories);
 //accounts endpoints
 router.get(Routes.accounts, getAllAccounts);
 router.post(Routes.addAccount,jsonParser, addAccount)
-router.delete(Routes.deleteAccount,jsonParser,deleteAccount)
+router.delete(`${Routes.deleteAccount}/:id`,deleteAccount)
 export default router;
