@@ -140,11 +140,11 @@ async function updateAccount(req: Request, res: Response) {
 }
 
 async function deleteAccount(req: Request, res: Response) {
-	console.log(req.query.id);
+	console.log(req.params.id);
 	try {
 		const result = await prisma.accounts.delete({
 			where: {
-				id: parseInt('' + req.query.id),
+				id: parseInt('' + req.params.id),
 			},
 		});
 		res.setHeader('Content-Type', 'application/json');
