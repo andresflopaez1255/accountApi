@@ -142,13 +142,13 @@ async function updateAccount(req: Request, res: Response) {
 async function deleteAccount(req: Request, res: Response) {
 	console.log(req.params.id);
 	try {
-		const result = await prisma.accounts.delete({
+		await prisma.accounts.delete({
 			where: {
 				id: parseInt('' + req.params.id),
 			},
 		});
 		res.setHeader('Content-Type', 'application/json');
-		res.status(200).json(messageBody(result, MessagesAccounts.deleted, true));
+		res.status(200).json(messageBody(null, MessagesAccounts.deleted, true));
 	} catch (error) {
 		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
 	}
