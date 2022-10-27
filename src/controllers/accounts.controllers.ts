@@ -146,7 +146,7 @@ async function deleteAccount(req: Request, res: Response) {
 			where: {
 				id: parseInt('' + req.params.id),
 			},
-		});
+		}).catch(console.log);
 		res.setHeader('Content-Type', 'application/json');
 		res.status(200).json(messageBody(null, MessagesAccounts.deleted, true));
 	} catch (error) {
