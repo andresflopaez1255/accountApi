@@ -32,7 +32,7 @@ async function getAllAccounts(
 					category_name: true,
 				},
 				where: {
-					id: account.id_user,
+					id: account.id_category,
 				},
 			});
 
