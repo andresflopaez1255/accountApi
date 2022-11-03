@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAccount, deleteAccount, getAllAccounts } from '../controllers/accounts.controllers';
+import { addAccount, deleteAccount, getAllAccounts, updateAccount } from '../controllers/accounts.controllers';
 import { getCategories } from '../controllers/categories.controllers';
 import {addUser, deleteUser, getUsers, updateUser } from '../controllers/users.controllers';
 import Routes from './routes.names';
@@ -18,4 +18,5 @@ router.get(Routes.categories, getCategories);
 router.get(Routes.accounts, getAllAccounts);
 router.post(Routes.addAccount,jsonParser, addAccount)
 router.get(`${Routes.deleteAccount}/:id`,deleteAccount)
+router.post(Routes.updateAccount,jsonParser, updateAccount)
 export default router;

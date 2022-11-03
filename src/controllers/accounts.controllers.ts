@@ -129,7 +129,7 @@ async function updateAccount(req: Request, res: Response) {
 	try {
 		const result = await prisma.accounts.update({
 			where: {
-				id: parseInt('' + req.query.id),
+				id: parseInt('' + req.body.id),
 			},
 			data: req.body,
 		});
