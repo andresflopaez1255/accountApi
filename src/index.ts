@@ -1,5 +1,5 @@
 'use strict';
-
+import swaggerUI from 'swagger-ui-express';
 import express,{Express} from 'express';
 import morgan from 'morgan';
 import router from './routes';
@@ -8,6 +8,7 @@ import { getAccountsWithDate } from './controllers/accounts.controllers';
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
 import 'dotenv/config'
+import { specs } from './swagger';
 /* import { getAccountsWithDate } from './controllers/accounts.controllers';
  */const app:Express = express();
 
@@ -34,6 +35,7 @@ router.use((req, res, next) => {
 	next();
 	return true;
 });
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(specs));
 
 
 app.use('/', router)

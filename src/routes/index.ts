@@ -7,9 +7,122 @@ import Routes from './routes.names';
 const router = express.Router();
 const jsonParser = express.json()
 //user endpoints
+/**
+ * @swagger
+ * components:
+ *    schema:
+ *      User:
+ *        type: object
+ *        properties:
+ *           id: 
+ *            type: number
+ *           name_user:
+ *            type: string
+ *           email_user:
+ *            type: string
+ *           cellphone_user:
+ *            type: string
+ *         
+ */
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Returns all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: the list of the users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#components/schema/User'
+ *               
+ *                 
+ */
+
 router.get(Routes.users, getUsers);
+
+
+/**
+ * @swagger
+ * /new_user:
+ *   post:
+ *    summary: create new user
+ *    tags: [Users]
+ *    requestBody:
+ *      content:
+ *        application/json:
+ *          schema:
+ *            type: object
+ *            items:
+ *             
+ *    responses:
+ *     200:
+ *      description: create new user
+ *      content:
+ *        application/json:
+ *          schema:
+ *            type: object
+ *      400:
+ *       description: user already exists
+ *       content:
+ *         application/json:
+ *           schema:
+ *            type: object
+ *            
+ *    
+ * 
+ * 
+ * 
+ * 
+ * 
+  */
 router.post(Routes.addUser, jsonParser,addUser)
-router.put(Routes.updateUser, jsonParser,updateUser)
+/**
+ * @swagger
+ * /update_user:
+ *   post:
+ *    summary: update specified user
+ *    tags: [Users]
+ *    requestBody:
+ *      content:
+ *        application/json:
+ *          schema:
+ *            type: object
+ *            properties:
+ *             id:
+ *               type: number
+ *             name_user: 
+ *               type: string
+ *             cellphone_user: 
+ *               type: string
+ *             email_user: 
+ *               type: string
+ *    responses:
+ *     200:
+ *      description: update user information successfully
+ *      content:
+ *        application/json:
+ *          schema:
+ *            type: object
+ *      400:
+ *       description: user already exists
+ *       content:
+ *         application/json:
+ *           schema:
+ *            type: object
+ *            
+ *    
+ * 
+ * 
+ * 
+ * 
+ * 
+  */
+router.post(Routes.updateUser, jsonParser,updateUser)
 router.delete(Routes.deleteUser, deleteUser);
 
 // categories endpoints

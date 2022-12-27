@@ -29,17 +29,22 @@ async function getUsers(
 async function addUser(req:Request, res: Response) {
 	const user = req.body
 	try {
-		const userIfExist = prisma.users.findFirst({
-			where: user.cellphone_user
+		const userIfExist = await prisma.users.findFirst({
+			where: {
+				cellphone_user: user.cellphone_user
+			}
+		}).catch(err => {
+			console.log('Error',err)
 		})
 		if(!userIfExist){
 			await prisma.users.create({
 				data:user
-			}); 
+			}).catch(console.log); 
 			
 			res.status(200).json(messageBody(null,MessagesUsers.created,true))
 		}
-		res.status(202).json(messageBody(null,'user if exist',false))
+		res.status(400).json(messageBody(null,'el usuario ya existe',true))
+
 	} catch (error) {
 		res.status(401).json(messageBody(error,MessagesUsers.error,false))
 	}
@@ -52,7 +57,7 @@ async function updateUser(req:Request, res:Response) {
 		
 		const result = await prisma.users.update({
 			where: {
-				id: parseInt('' + req.query.id)
+				id: parseInt('' + req.body.id)
 			},
 			data: req.body
 		})
