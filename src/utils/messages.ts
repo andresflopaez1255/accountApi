@@ -26,10 +26,21 @@ enum MessagesAccounts {
     error = 'an error occurred'
 } 
 
+enum MessagesAuth {
+    created = 'vendor created successfully',
+    updated = 'vendor updated succesfully',
+    deleted = 'vendor deleted',
+    successful = 'vendors found successfully',
+    notSuccessful = 'vendor not found',
+    vendorAlreadyExists = "vendor already exist",
+    error = 'an error occurred'
+} 
+
 export {
 	MessagesAccounts,
 	MessagesUsers,
-	MessagesCategories
+	MessagesCategories,
+    MessagesAuth
 }
 
 

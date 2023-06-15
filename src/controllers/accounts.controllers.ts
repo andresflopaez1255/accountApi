@@ -13,7 +13,8 @@ async function getAllAccounts(
 	res: Response
 ): Promise<Response<any, Record<string, any>> | undefined> {
 	try {
-		const allAccounts = await prisma.accounts.findMany();
+
+		const allAccounts = await prisma.accounts.findMany()
 		const dataAccounts: any = [];
 		for (let index = 0; index < allAccounts.length; index++) {
 			const account = allAccounts[index];
@@ -43,20 +44,22 @@ async function getAllAccounts(
 				category: categoryInfo?.category_name,
 			});
 		}
-		res.setHeader('Content-Type', 'application/json');
 		if (!dataAccounts.length) {
+			console.log(dataAccounts)
+
 			return res
-				.status(200)
-				.send(messageBody(dataAccounts, MessagesAccounts.notSuccessful, true));
+				.status(400)
+				.send(messageBody(dataAccounts, MessagesAccounts.notSuccessful, false));
 		} else {
 			return res
 				.status(200)
 				.send(messageBody(dataAccounts, MessagesAccounts.successful, true));
 		}
 	} catch (error) {
+		console.log(error)
 		return res
 			.status(400)
-			.send(messageBody(null, MessagesAccounts.error, true));
+			.send(messageBody(null, MessagesAccounts.error, false));
 	}
 }
 
@@ -68,7 +71,6 @@ async function getAccountsWithDate() {
 		const allAccounts: any = await prisma.$queryRaw`
          SELECT * FROM accounts WHERE  expiration_date >= ${date} AND expiration_date <= ${after2daysFromToday}
         `;
-		console.log('okiii', allAccounts);
 		const dataAccounts: any = [];
 		for (let index = 0; index < allAccounts.length; index++) {
 			const account = allAccounts[index];
@@ -140,11 +142,11 @@ async function updateAccount(req: Request, res: Response) {
 }
 
 async function deleteAccount(req: Request, res: Response) {
-	console.log(req.params.id);
+	console.log(req.query.id);
 	try {
 		await prisma.accounts.delete({
 			where: {
-				id: parseInt('' + req.params.id),
+				id: parseInt(`${req.query.id}`),
 			},
 		}).catch(console.log);
 		res.setHeader('Content-Type', 'application/json');

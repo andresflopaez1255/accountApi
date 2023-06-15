@@ -26,13 +26,16 @@ async function getCategories(_req: Request, res: Response): Promise<Response<any
 async function addCategory(req:Request, res: Response) {
 	const category = req.body
 	try {
-		const CategoryIfExist = prisma.users.findFirst({
-			where: category.id
-		})
+		const CategoryIfExist = await prisma.categories_account.findFirst({
+			where: {
+               category_name: category.category_name
+			}
+		}).catch(console.log)
+		console.log(CategoryIfExist)
 		if(!CategoryIfExist){
 			await prisma.categories_account.create({
 				data:category
-			}); 
+			}).catch(console.log); 
 			
 			res.status(200).json(messageBody(null,MessagesCategories.created,true))
 		}

@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin-arm64"]
 }
 
 datasource db {
@@ -13,28 +11,45 @@ datasource db {
 model users {
   id             Int        @id @default(autoincrement())
   name_user      String     @db.VarChar(500)
-  cellphone_user String        @db.VarChar(20)
+  cellphone_user String     @db.VarChar(20)
   email_user     String     @db.VarChar(200)
   accounts       accounts[]
 }
 
 model accounts {
-  id            Int                @id @default(autoincrement())
-  id_user       Int                @db.Int
-  email_account String             @db.VarChar(500)
-  pass_account  String             @db.VarChar(200)
-  name_profile  String             @db.VarChar(200)
-  code_profile  Int                @db.Int
-  id_category   Int                @db.Int
-  expiration_date String           @db.VarChar(12)
-  info_user     users?               @relation(fields: [id_user], references: [id])
-  info_category categories_account @relation(fields: [id_category], references: [id])
-  @@index([id_user], name: "accounts_id_user_fkey")
-  @@index([id_category], name: "accounts_id_category_fkey")
+  id              Int                @id @default(autoincrement())
+  id_user         Int
+  email_account   String             @db.VarChar(500)
+  pass_account    String             @db.VarChar(200)
+  name_profile    String             @db.VarChar(200)
+  code_profile    Int
+  id_category     Int
+  expiration_date String             @db.VarChar(12)
+  info_category   categories_account @relation(fields: [id_category], references: [id])
+  info_user       users              @relation(fields: [id_user], references: [id])
+
+  @@index([id_user], map: "accounts_id_user_fkey")
+  @@index([id_category], map: "accounts_id_category_fkey")
 }
 
 model categories_account {
-  id            Int    @id @default(autoincrement())
-  category_name String @db.VarChar(500)
-  accounts accounts[]
+  id            Int        @id @default(autoincrement())
+  category_name String     @db.VarChar(500)
+  accounts      accounts[]
+}
+
+model vendors {
+  id           Int     @id @default(autoincrement())
+  id_vendor    String  @db.VarChar(10)
+  email        String  @db.VarChar(500)
+  type_doc     Int     @db.Int
+  num_doc      String  @db.VarChar(10)
+  password     String  @db.VarChar(700)
+  access_token String? @db.VarChar(700)
+}
+
+model vendor_recovery {
+  id        Int    @id @default(autoincrement())
+  id_vendor String @db.VarChar(10)
+  code_reco String @db.VarChar(6)
 }

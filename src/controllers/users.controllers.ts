@@ -28,6 +28,8 @@ async function getUsers(
 
 async function addUser(req:Request, res: Response) {
 	const user = req.body
+	res.setHeader('Content-Type', 'application/json');
+
 	try {
 		const userIfExist = await prisma.users.findFirst({
 			where: {
@@ -68,25 +70,21 @@ async function updateUser(req:Request, res:Response) {
 }
 
 async function deleteUser(req:Request,res:Response) {
-	console.log( req.query.id)
+	const id = req.query.id?.toString() ?? ''
+	console.log(id)
 	try {
-		const  account = await prisma.accounts.findFirst({
-			where: {
-				id_user:  parseInt('' + req.query.id)
-			}
-
-		})
+		
 
 		const result = await prisma.users.delete({
 			where: {
-				id:  account?.id_user
+				id: parseInt(id)
 			}
 
 		})
 
 		await prisma.accounts.deleteMany({
 			where: {
-				id:  account?.id_user
+				id:  parseInt(id)
 			}
 
 		})
