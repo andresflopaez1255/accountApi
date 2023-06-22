@@ -4,10 +4,14 @@ import messageBody from '../utils/messageBody';
 import { MessagesUsers } from '../utils/messages';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
 async function getUsers(
 	req: Request,
 	res: Response
 ): Promise<Response<any, Record<string, any>> | undefined> {
+	res.setHeader('Content-Type', 'application/json');
+
 	try {
 		const allusers = await prisma.users.findMany();
 
@@ -53,6 +57,8 @@ async function addUser(req:Request, res: Response) {
 }
 
 async function updateUser(req:Request, res:Response) {
+	res.setHeader('Content-Type', 'application/json');
+
 	
 	
 	try {
@@ -70,6 +76,8 @@ async function updateUser(req:Request, res:Response) {
 }
 
 async function deleteUser(req:Request,res:Response) {
+	res.setHeader('Content-Type', 'application/json');
+
 	const id = req.query.id?.toString() ?? ''
 	console.log(id)
 	try {
