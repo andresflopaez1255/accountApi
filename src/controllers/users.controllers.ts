@@ -32,7 +32,6 @@ async function getUsers(
 
 async function addUser(req:Request, res: Response) {
 	const user = req.body
-	res.setHeader('Content-Type', 'application/json');
 
 	try {
 		const userIfExist = await prisma.users.findFirst({
@@ -49,6 +48,8 @@ async function addUser(req:Request, res: Response) {
 			
 			res.status(200).json(messageBody(null,MessagesUsers.created,true))
 		}
+		res.setHeader('Content-Type', 'application/json');
+
 		res.status(400).json(messageBody(null,'el usuario ya existe',true))
 
 	} catch (error) {
@@ -57,7 +58,6 @@ async function addUser(req:Request, res: Response) {
 }
 
 async function updateUser(req:Request, res:Response) {
-	res.setHeader('Content-Type', 'application/json');
 
 	
 	
@@ -69,6 +69,8 @@ async function updateUser(req:Request, res:Response) {
 			},
 			data: req.body
 		})
+		res.setHeader('Content-Type', 'application/json');
+
 		res.status(200).json(messageBody(result,MessagesUsers.updated,true))
 	} catch (error) {
 		res.status(400).json(messageBody(error,MessagesUsers.error,false))
@@ -76,7 +78,6 @@ async function updateUser(req:Request, res:Response) {
 }
 
 async function deleteUser(req:Request,res:Response) {
-	res.setHeader('Content-Type', 'application/json');
 
 	const id = req.query.id?.toString() ?? ''
 	console.log(id)
@@ -96,7 +97,8 @@ async function deleteUser(req:Request,res:Response) {
 			}
 
 		})
-		
+		res.setHeader('Content-Type', 'application/json');
+
 		res.status(200).json(messageBody(result,MessagesUsers.deleted,true))
 	} catch (error) {
 		res.status(400).json(messageBody(error,MessagesUsers.error,false))

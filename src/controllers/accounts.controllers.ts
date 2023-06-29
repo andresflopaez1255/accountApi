@@ -45,11 +45,10 @@ async function getAllAccounts(
 			});
 		}
 		if (!dataAccounts.length) {
-			console.log(dataAccounts)
 
 			return res
-				.status(400)
-				.send(messageBody(dataAccounts, MessagesAccounts.notSuccessful, false));
+				.status(200)
+				.send(messageBody(dataAccounts, MessagesAccounts.successful, false));
 		} else {
 			return res
 				.status(200)
@@ -142,7 +141,7 @@ async function updateAccount(req: Request, res: Response) {
 }
 
 async function deleteAccount(req: Request, res: Response) {
-	console.log(req.query.id);
+	
 	try {
 		await prisma.accounts.delete({
 			where: {
