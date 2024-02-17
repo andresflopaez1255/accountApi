@@ -32,7 +32,7 @@ async function getUsers(
 
 async function addUser(req:Request, res: Response) {
 	const user = req.body
-
+	res.setHeader('Content-Type', 'application/json');
 	try {
 		const userIfExist = await prisma.users.findFirst({
 			where: {
@@ -48,7 +48,7 @@ async function addUser(req:Request, res: Response) {
 			
 			res.status(200).json(messageBody(null,MessagesUsers.created,true))
 		}
-		res.setHeader('Content-Type', 'application/json');
+		
 
 		res.status(400).json(messageBody(null,'el usuario ya existe',true))
 
