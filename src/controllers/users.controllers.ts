@@ -12,21 +12,18 @@ async function getUsers(
 ): Promise<void> {
 	res.setHeader('Content-Type', 'application/json');
 
-	try {
-		const allusers = await prisma.users.findMany();
+	
+	const allusers = await prisma.users.findMany();
 
-		let responseMessage;
-		if (!allusers.length) {
-			responseMessage = messageBody(allusers, MessagesUsers.notSuccessful, true);
-		} else {
-			responseMessage = messageBody(allusers, MessagesUsers.successful, true);
-		}
-
-		res.status(200).send(responseMessage);
-	} catch (error) {
-		console.error(error);
-		res.status(400).send(messageBody(null, MessagesUsers.error, true));
+	let responseMessage;
+	if (!allusers.length) {
+		responseMessage = messageBody(allusers, MessagesUsers.notSuccessful, true);
+	} else {
+		responseMessage = messageBody(allusers, MessagesUsers.successful, true);
 	}
+
+	res.status(200).send(responseMessage);
+	
 }
 
 
