@@ -25,10 +25,11 @@ async function getUsers(
 				.send(messageBody(allusers, MessagesUsers.successful, true));
 		}
 	} catch (error) {
+		console.log(error); // Mueve esto aquí
 		return res.status(400).send(messageBody(null, MessagesUsers.error, true));
-		console.log(error);
 	}
 }
+
 
 async function addUser(req:Request, res: Response) {
 	const user = req.body
