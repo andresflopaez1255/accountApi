@@ -9,26 +9,26 @@ import { MessagesUsers } from '../utils/messages';
 async function getUsers(
 	req: Request,
 	res: Response
-): Promise<Response<any, Record<string, any>> | undefined> {
+): Promise<void> {
 	res.setHeader('Content-Type', 'application/json');
 
 	try {
 		const allusers = await prisma.users.findMany();
 
+		let responseMessage;
 		if (!allusers.length) {
-			return res
-				.status(200)
-				.send(messageBody(allusers, MessagesUsers.notSuccessful, true));
+			responseMessage = messageBody(allusers, MessagesUsers.notSuccessful, true);
 		} else {
-			return res
-				.status(200)
-				.send(messageBody(allusers, MessagesUsers.successful, true));
+			responseMessage = messageBody(allusers, MessagesUsers.successful, true);
 		}
+
+		res.status(200).send(responseMessage);
 	} catch (error) {
-		console.log(error); // Mueve esto aquí
-		return res.status(400).send(messageBody(null, MessagesUsers.error, true));
+		console.error(error);
+		res.status(400).send(messageBody(null, MessagesUsers.error, true));
 	}
 }
+
 
 
 async function addUser(req:Request, res: Response) {
