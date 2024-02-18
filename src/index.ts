@@ -7,11 +7,13 @@ import cron from 'node-cron'
 import { getAccountsWithDate } from './controllers/accounts.controllers';
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
+import cors from 'cors'
 import 'dotenv/config'
 import { specs } from './swagger';
 /* import { getAccountsWithDate } from './controllers/accounts.controllers';
  */const app:Express = express();
 
+app.use(cors());
 
 
 /** Logging */
@@ -60,3 +62,4 @@ cron.schedule('00 07 * * *', async ()=>{
 	
 	console.log(result)
 })
+

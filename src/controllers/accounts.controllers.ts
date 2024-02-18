@@ -13,7 +13,7 @@ async function getAllAccounts(
 	res: Response
 ): Promise<Response<any, Record<string, any>> | undefined> {
 	try {
-
+		res.setHeader('Content-Type', 'application/json');
 		const allAccounts = await prisma.accounts.findMany()
 		const dataAccounts: any = [];
 		for (let index = 0; index < allAccounts.length; index++) {
@@ -113,13 +113,14 @@ async function getAccountsWithDate() {
 
 async function addAccount(req: Request, res: Response) {
 	const account = req.body;
+	res.setHeader('Content-Type', 'application/json');
 	try {
 		await prisma.accounts
 			.create({
 				data: account,
 			})
 			.catch(console.log);
-		res.setHeader('Content-Type', 'application/json');
+		
 		res.status(200).json(messageBody(null, MessagesAccounts.created, true));
 	} catch (error) {
 		res.status(401).json(messageBody(error, MessagesAccounts.error, false));
@@ -127,6 +128,7 @@ async function addAccount(req: Request, res: Response) {
 }
 
 async function updateAccount(req: Request, res: Response) {
+	res.setHeader('Content-Type', 'application/json');
 	try {
 		const result = await prisma.accounts.update({
 			where: {
@@ -141,14 +143,14 @@ async function updateAccount(req: Request, res: Response) {
 }
 
 async function deleteAccount(req: Request, res: Response) {
-	
+	res.setHeader('Content-Type', 'application/json');
 	try {
 		await prisma.accounts.delete({
 			where: {
 				id: parseInt(`${req.query.id}`),
 			},
 		}).catch(console.log);
-		res.setHeader('Content-Type', 'application/json');
+		
 		res.status(200).json(messageBody(null, MessagesAccounts.deleted, true));
 	} catch (error) {
 		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
