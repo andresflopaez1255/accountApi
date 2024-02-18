@@ -1,5 +1,6 @@
 // swagger config
 import swaggerJsDoc from 'swagger-jsdoc';
+
 const options = {
 	definition: {
 		openapi: '3.0.0',
@@ -12,7 +13,7 @@ const options = {
 
 		servers: [
 			{
-				url: 'http://localhost:3000',
+				url: process.env.SERVER_URL || 'http://localhost:3000',
 				description: 'My API Documentation',
 			},
 		],
