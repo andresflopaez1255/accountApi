@@ -9,49 +9,49 @@ import { MessagesUsers } from '../utils/messages';
 async function getUsers(
 	req: Request,
 	res: Response
-): Promise<void> {
+): Promise<Response<any, Record<string, any>> | undefined> {
 	res.setHeader('Content-Type', 'application/json');
 
-	
-	const allusers = await prisma.users.findMany();
+	try {
+		const allusers = await prisma.users.findMany();
 
-	let responseMessage;
-	if (!allusers.length) {
-		responseMessage = messageBody(allusers, MessagesUsers.notSuccessful, true);
-	} else {
-		responseMessage = messageBody(allusers, MessagesUsers.successful, true);
+		if (!allusers.length) {
+			return res
+				.status(200)
+				.send(messageBody(allusers, MessagesUsers.notSuccessful, true));
+		} else {
+			return res
+				.status(200)
+				.send(messageBody(allusers, MessagesUsers.successful, true));
+		}
+	} catch (error) {
+		console.log(error); // Mueve esto aquí
+		return res.status(400).send(messageBody(null, MessagesUsers.error, true));
 	}
-
-	res.status(200).send(responseMessage);
-	
 }
 
 
-
-async function addUser(req:Request, res: Response) {
-	const user = req.body
+async function addUser(req: Request, res: Response) {
+	const user = req.body;
 	res.setHeader('Content-Type', 'application/json');
 	try {
 		const userIfExist = await prisma.users.findFirst({
 			where: {
 				cellphone_user: user.cellphone_user
 			}
-		}).catch(err => {
-			console.log('Error',err)
-		})
-		if(!userIfExist){
+		});
+
+		if (!userIfExist) {
 			await prisma.users.create({
-				data:user
-			}).catch(console.log); 
-			
-			res.status(200).json(messageBody(null,MessagesUsers.created,true))
+				data: user
+			});
+			res.status(200).json(messageBody(null, MessagesUsers.created, true));
+		} else {
+			res.status(400).json(messageBody(null, 'El usuario ya existe', true));
 		}
-		
-
-		res.status(400).json(messageBody(null,'el usuario ya existe',true))
-
 	} catch (error) {
-		res.status(401).json(messageBody(error,MessagesUsers.error,false))
+		console.error(error);
+		res.status(401).json(messageBody(error, MessagesUsers.error, false));
 	}
 }
 
