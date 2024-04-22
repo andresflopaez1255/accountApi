@@ -4,6 +4,8 @@ services:
   api_prod:
     build:
       context: ./
+      args:
+        ENVIRONMENT: production
     ports:
       - "8080:8080"
     environment:
@@ -13,6 +15,8 @@ services:
   api_dev:
     build:
       context: ./
+      args:
+        ENVIRONMENT: development
     ports:
       - "3000:3000"
     environment:
