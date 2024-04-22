@@ -3,7 +3,7 @@ version: '3'
 services:
   api_prod:
     build:
-      context: ./src
+      context: ./
     ports:
       - "8080:8080"
     environment:
@@ -12,7 +12,7 @@ services:
 
   api_dev:
     build:
-      context: ./src
+      context: ./
     ports:
       - "3000:3000"
     environment:
