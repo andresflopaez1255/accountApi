@@ -13,8 +13,6 @@ COPY . .
 
 RUN npx prisma generate
 
-ARG ENVIRONMENT
-COPY .env.${ENVIRONMENT} .env
 
 CMD [ "npm", "start" ]
 
