@@ -12,8 +12,13 @@ import 'dotenv/config'
 import { specs } from './swagger';
 /* import { getAccountsWithDate } from './controllers/accounts.controllers';
  */const app:Express = express();
+const corsOptions = {
+	credentials: true,
+	origin: ['http://localhost:3000', 'http://ec2-3-129-19-228.us-east-2.compute.amazonaws.com'] // Whitelist the domains you want to allow
+};
 
-app.use(cors());
+app.use(cors(corsOptions));
+
 
 
 /** Logging */
