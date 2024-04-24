@@ -14,7 +14,7 @@ import { specs } from './swagger';
  */const app:Express = express();
 const corsOptions = {
 	credentials: true,
-	origin: ['http://localhost:3000', 'http://ec2-3-129-19-228.us-east-2.compute.amazonaws.com'] // Whitelist the domains you want to allow
+	origin: ['http://localhost:3000', 'ec2-user@ec2-18-118-212-141.us-east-2.compute.amazonaws.com'] // Whitelist the domains you want to allow
 };
 
 app.use(cors(corsOptions));
