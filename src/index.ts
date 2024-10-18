@@ -1,6 +1,6 @@
 'use strict';
 import swaggerUI from 'swagger-ui-express';
-import express,{Express} from 'express';
+import express, {Express, Request, Response } from 'express';
 import morgan from 'morgan';
 import router from './routes';
 import cron from 'node-cron'
@@ -29,7 +29,7 @@ router.use(express.urlencoded({ extended: false }));
 router.use(express.json());
 
 /** RULES OF OUR API */
-router.use((req, res, next) => {
+router.use((req:Request, res:Response, next) => {
 	// set the CORS policy
 	res.header('Access-Control-Allow-Origin', '*');
 	// set the CORS headers
@@ -47,7 +47,7 @@ app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(specs));
 
 app.use('/', router)
 
-app.get('/', (req, res) => {
+app.get('/', (req:Request, res:Response) => {
 	res.send('hola...');
 });
 
