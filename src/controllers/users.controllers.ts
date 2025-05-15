@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/dbClient';
 import messageBody from '../utils/messageBody';
 import { MessagesUsers } from '../utils/messages';
+import { db } from '../firebase';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
@@ -11,18 +12,18 @@ async function getUsers(
 	res: Response
 ): Promise<Response<any, Record<string, any>> | undefined> {
 	res.setHeader('Content-Type', 'application/json');
-
+	const usersSnapshot = await db.collection('users').get();
+	const users = usersSnapshot.docs.map(doc => doc.data());
 	try {
-		const allusers = await prisma.users.findMany();
 
-		if (!allusers.length) {
+		if (!users.length) {
 			return res
 				.status(200)
-				.send(messageBody(allusers, MessagesUsers.notSuccessful, true));
+				.send(messageBody(users, MessagesUsers.notSuccessful, true));
 		} else {
 			return res
 				.status(200)
-				.send(messageBody(allusers, MessagesUsers.successful, true));
+				.send(messageBody(users, MessagesUsers.successful, true));
 		}
 	} catch (error) {
 		console.log(error); // Mueve esto aquí
