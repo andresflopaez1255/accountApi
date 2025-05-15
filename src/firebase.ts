@@ -3,10 +3,12 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import 'dotenv/config';
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG || '{}');
-
+const CERT = process.env.FIREBASE_CONFIG?.replace(
+  /\\n/g,
+ '\n',
+);
 initializeApp({
-  credential: cert(serviceAccount),
+  credential: cert(CERT!),
   databaseURL: "https://accounts-manager-24563.firebaseio.com"
 });
 
