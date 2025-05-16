@@ -3,7 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import 'dotenv/config';
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG || '{}');
+const serviceAccount = "./serviceAccountKey.json";
 
 initializeApp({
   credential: cert(serviceAccount),
