@@ -34,7 +34,7 @@ async function getAllAccounts(
         ...account,
         name_user: userInfo.docs[0].data()?.name_user,
         cellphone_user: userInfo.docs[0].data()?.cellphone_user,
-        category: categoriesInfo.docs.map((doc) => doc.data().category_name),
+        category: categoriesInfo.docs[0].data()?.category_name,
       });
     }
     if (!dataAccounts.length) {
