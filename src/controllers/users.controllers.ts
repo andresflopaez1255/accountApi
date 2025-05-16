@@ -13,6 +13,7 @@ async function getUsers(
   res.setHeader("Content-Type", "application/json");
   const usersSnapshot = await db.collection("users").get();
   const users = usersSnapshot.docs.map((doc) => doc.data());
+  
   try {
     if (!users.length) {
       return res
@@ -42,11 +43,11 @@ async function addUser(req: Request, res: Response) {
       // buscar cuentas por id de usuario en firebase en accounts
       const accounts = await db
         .collection("accounts")
-        .where("id_user", "==", user.user_id)
+        .where("cellphone_user", "==", user.cellphone_user)
         .get();
 
       db.collection("users").add({
-        id_user: uuid(),
+        id: uuid(),
         ...user,
         accounts: accounts.docs.length > 0 ? accounts.docs : [],
       });

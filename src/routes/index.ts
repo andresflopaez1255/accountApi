@@ -288,7 +288,7 @@ router.post(Routes.addAccount, jsonParser, addAccount);
  *     - in: query
  *       name: id
  *       schema:
- *        type: integer
+ *        type: string
  *       required: true
  *       
  *       

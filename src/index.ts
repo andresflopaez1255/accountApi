@@ -14,13 +14,15 @@ import { specs } from './swagger';
  */const app:Express = express();
 const corsOptions = {
 	credentials: true,
-	origin: ['http://localhost:3000'] // Whitelist the domains you want to allow
+	origin: ['http://localhost:3001',"https://accountapi-8smd.onrender.com"] // Whitelist the domains you want to allow
 };
 
 app.use(cors(corsOptions));
 
-const PORT = process.env.PORT || 3000;
-
+const PORT = process.env.PORT || 3001; // Cambia a un puerto diferente
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
 /** Logging */
 router.use(morgan('dev'));
@@ -52,9 +54,7 @@ app.get('/', (req:Request, res:Response) => {
 	res.send('hola...');
 });
 
-app.listen(PORT,()=>{
-	console.log('Example app listening on port 3000')
-})
+
 
 cron.schedule('00 07 * * *', async ()=>{
 	const result = await getAccountsWithDate()
