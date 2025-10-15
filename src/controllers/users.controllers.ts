@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import prisma from '../utils/dbClient';
 import messageBody from '../utils/messageBody';
 import { MessagesUsers } from '../utils/messages';
 import { db } from '../firebase';
@@ -67,10 +66,15 @@ async function updateUser(req: Request, res: Response) {
 
 	try {
 		const user = req.body;
-		const result = await prisma.users.update({
-			where: { id: user.id },
-			data: { ...user },
-		});
+
+		const userDoc = await db.collection('users').where('id', '==', user.id).get();
+		if (userDoc.empty) {
+			res.status(404).json(messageBody(null, 'User not found', false));
+		}
+
+		await db.collection('users').doc(userDoc.docs[0].id).update(user);
+
+		const result = user;
 		res.status(200).json(messageBody(result, MessagesUsers.updated, true));
 	} catch (error) {
 		res.status(400).json(messageBody(error, MessagesUsers.error, false));

@@ -6,8 +6,10 @@ import moment from 'moment';
 import prisma from '../utils/dbClient';
 import messageBody from '../utils/messageBody';
 import { MessagesAccounts } from '../utils/messages';
-import { db } from '../firebase';
-import { v4 as uuid } from 'uuid';
+import { getAllAccountsUseCase } from '../usecases/accounts/getAllAccounts.usecase';
+import { createNewAccountUseCase } from '../usecases/accounts/createNewAccount.usecase';
+import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
+import { deleteAccountUseCase } from '../usecases/accounts/deleteAccont.usecase';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAllAccounts(
 	req: Request,
@@ -15,36 +17,16 @@ async function getAllAccounts(
 ): Promise<Response<any, Record<string, any>> | undefined> {
 	try {
 		res.setHeader('Content-Type', 'application/json');
-		const accounts = await db.collection('accounts').get();
-		const dataAccounts: any = [];
-		for (let index = 0; index < accounts.docs.length; index++) {
-			const account = accounts.docs[index].data();
-			console.log(account);
-			const userInfo = await db
-				.collection('users')
-				.where('id', '==', account.id_user)
-				.get();
-			const categoriesInfo = await db
-				.collection('categories_account')
-				.where('id', '==', account.id_category)
-				.get();
+		const accounts = await getAllAccountsUseCase();
 
-			//console.log(userInfo.docs.map((doc) => doc.data()));
-			dataAccounts.push({
-				...account,
-				name_user: userInfo.docs[0].data()?.name_user,
-				cellphone_user: userInfo.docs[0].data()?.cellphone_user,
-				category: categoriesInfo.docs[0].data()?.category_name,
-			});
-		}
-		if (!dataAccounts.length) {
+		if (!accounts.length) {
 			return res
 				.status(200)
-				.send(messageBody(dataAccounts, MessagesAccounts.successful, false));
+				.send(messageBody(accounts, MessagesAccounts.notSuccessful, true));
 		} else {
 			return res
 				.status(200)
-				.send(messageBody(dataAccounts, MessagesAccounts.successful, true));
+				.send(messageBody(accounts, MessagesAccounts.successful, true));
 		}
 	} catch (error) {
 		console.log(error);
@@ -108,32 +90,9 @@ async function addAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
 	try {
 
-		const newaccount = { id: uuid(), ...account }
-		const categoryID = account.id_category;
-		const categoryInfo = await db
-			.collection('categories_account')
-			.where('id', '==', categoryID)
-			.get();
+		const newAccount = createNewAccountUseCase(account);
 
-		await
-		db.collection('accounts').add(newaccount);
-
-		const user = await db
-			.collection('users')
-			.where('id', '==', account.id_user)
-			.get();
-
-		if (user.docs.length > 0) {
-			const userData = user.docs[0].data();
-
-			const accounts = userData.accounts || [];
-			accounts.push({ ...newaccount, category: categoryInfo.docs[0]?.data().category_name });
-			await db.collection('users').doc(user.docs[0].id).update({
-				accounts: accounts,
-			});
-		}
-
-		res.status(200).json(messageBody(null, MessagesAccounts.created, true));
+		res.status(200).json(messageBody(newAccount, MessagesAccounts.created, true));
 	} catch (error) {
 		res.status(401).json(messageBody(error, MessagesAccounts.error, false));
 	}
@@ -143,42 +102,8 @@ async function updateAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
 	try {
 		const account = req.body;
-		const accountDoc = await db
-			.collection('accounts')
-			.where('id', '==', account.id)
-			.get();
+		const result = await updateAccountUseCase(account);
 
-		if (accountDoc.empty) {
-			res
-				.status(404)
-				.json(messageBody(null, 'Account not found', false));
-		}
-
-		await db
-			.collection('accounts')
-			.doc(accountDoc.docs[0].id)
-			.update(account);
-
-		// Actualizar la cuenta en el array de cuentas del usuario relacionado
-		const user = await db
-			.collection('users')
-			.where('id', '==', account.id_user)
-			.get();
-
-		if (user.docs.length > 0) {
-			const userData = user.docs[0].data();
-			const accounts = userData.accounts || [];
-			const accountIndex = accounts.findIndex((acc: any) => acc.id === account.id);
-
-			if (accountIndex !== -1) {
-				accounts[accountIndex] = { ...accounts[accountIndex], ...account };
-				await db.collection('users').doc(user.docs[0].id).update({
-					accounts: accounts,
-				});
-			}
-		}
-
-		const result = { ...account };
 		res.status(200).json(messageBody(result, MessagesAccounts.updated, true));
 	} catch (error) {
 		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
@@ -189,38 +114,8 @@ async function deleteAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
 	console.log(req.query)
 	try {
-		const { id } = req.query;
-		const accountDoc = await db
-			.collection('accounts')
-			.where('id', '==', id)
-			.get();
-
-		if (accountDoc.empty) {
-			return res
-				.status(404)
-				.json(messageBody(null, 'Account not found', false));
-		}
-
-		const accountData = accountDoc.docs[0].data();
-
-		const user = await db
-			.collection('users')
-			.where('id', '==', accountData.id_user)
-			.get();
-
-		if (user.docs.length > 0) {
-			const userData = user.docs[0].data();
-
-			const accounts = Array.isArray(userData.accounts) ? userData.accounts : [];
-			const updatedAccounts = accounts.filter((acc: any) => acc.id !== id);
-
-			const userDocRef = user.docs[0].ref;
-			await userDocRef.update({ accounts: updatedAccounts });
-
-		}
-
-
-		await db.collection('accounts').doc(accountDoc.docs[0].id).delete();
+		const accountId = req.query.id as string;
+		const accountData = await deleteAccountUseCase(accountId);
 		return res
 			.status(200)
 			.json(messageBody(accountData, MessagesAccounts.deleted, true));
