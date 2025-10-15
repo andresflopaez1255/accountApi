@@ -107,10 +107,10 @@ async function addAccount(req: Request, res: Response) {
 	const account = req.body;
 	res.setHeader('Content-Type', 'application/json');
 	try {
-		db.collection('accounts').add({
-			id: uuid(),
-			...account,
-		});
+
+		const newaccount = { id: uuid(), ...account }
+		await
+		db.collection('accounts').add(newaccount);
 
 		// buscar usuario por user_id y modificar accounts array
 		const user = await db
@@ -122,7 +122,7 @@ async function addAccount(req: Request, res: Response) {
 			const userData = user.docs[0].data();
 
 			const accounts = userData.accounts || [];
-			accounts.push(account);
+			accounts.push(newaccount);
 			await db.collection('users').doc(user.docs[0].id).update({
 				accounts: accounts,
 			});
@@ -182,8 +182,9 @@ async function updateAccount(req: Request, res: Response) {
 
 async function deleteAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
+	console.log(req.query)
 	try {
-		const { id } = req.params;
+		const { id } = req.query;
 		const accountDoc = await db
 			.collection('accounts')
 			.where('id', '==', id)
@@ -204,21 +205,22 @@ async function deleteAccount(req: Request, res: Response) {
 
 		if (user.docs.length > 0) {
 			const userData = user.docs[0].data();
-			const accounts = userData.accounts || [];
-			const updatedAccounts = accounts.filter(
-				(acc: any) => acc.id !== id
-			);
-			await db.collection('users').doc(user.docs[0].id).update({
-				accounts: updatedAccounts,
-			});
+
+			const accounts = Array.isArray(userData.accounts) ? userData.accounts : [];
+			const updatedAccounts = accounts.filter((acc: any) => acc.id !== id);
+
+			const userDocRef = user.docs[0].ref;
+			await userDocRef.update({ accounts: updatedAccounts });
+
 		}
 
-		
+
 		await db.collection('accounts').doc(accountDoc.docs[0].id).delete();
 		return res
 			.status(200)
 			.json(messageBody(accountData, MessagesAccounts.deleted, true));
 	} catch (error) {
+		console.log(error)
 		return res
 			.status(400)
 			.json(messageBody(error, MessagesAccounts.error, false));

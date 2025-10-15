@@ -1,71 +1,74 @@
 'use strict';
-import swaggerUI from 'swagger-ui-express';
-import express, {Express, Request, Response } from 'express';
+
+import express, { Express, Request, Response } from 'express';
 import morgan from 'morgan';
+import cors from 'cors';
+import cron from 'node-cron';
+import * as swaggerUi from 'swagger-ui-express';
+import 'dotenv/config';
+
 import router from './routes';
-import cron from 'node-cron'
 import { getAccountsWithDate } from './controllers/accounts.controllers';
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
-import cors from 'cors'
-import 'dotenv/config'
 import { specs } from './swagger';
-/* import { getAccountsWithDate } from './controllers/accounts.controllers';
- */const app:Express = express();
+
+const app: Express = express();
+
+/* ----------------------------- CONFIGURACIONES ----------------------------- */
+const PORT = process.env.PORT || 3001;
+
 const corsOptions = {
 	credentials: true,
-	origin: ['http://localhost:3001',"https://accountapi-8smd.onrender.com"] // Whitelist the domains you want to allow
+	origin: ['http://localhost:3001', 'https://accountapi-8smd.onrender.com'],
 };
 
+/* ----------------------------- MIDDLEWARES --------------------------------- */
 app.use(cors(corsOptions));
+app.use(morgan('dev'));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
-const PORT = process.env.PORT || 3001; // Cambia a un puerto diferente
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-/** Logging */
-router.use(morgan('dev'));
-/** Parse the request */
-router.use(express.urlencoded({ extended: false }));
-/** Takes care of JSON data */
-router.use(express.json());
-
-/** RULES OF OUR API */
-router.use((req:Request, res:Response, next) => {
-	// set the CORS policy
+/* ------------------------------- CORS HEADERS ------------------------------ */
+app.use((req: Request, res: Response, next) => {
 	res.header('Access-Control-Allow-Origin', '*');
-	// set the CORS headers
-	res.header('Access-Control-Allow-Headers', 'origin, X-Requested-With,Content-Type,Accept, Authorization');
-	// set the CORS method headers
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
 	if (req.method === 'OPTIONS') {
-		res.header('Access-Control-Allow-Methods', 'GET PATCH DELETE POST');
-		return res.status(200).json({});
+		res.header('Access-Control-Allow-Methods', 'GET, PATCH, DELETE, POST');
+		res.status(200).json({});
 	}
 	next();
-	return true;
 });
-app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(specs));
 
+/* ------------------------------- SWAGGER DOCS ------------------------------ */
+// swaggerUi.serve devuelve un arreglo de middlewares, por eso usamos el spread + casting
+app.use(
+	'/api-docs',
+	...(swaggerUi.serve as unknown as express.RequestHandler[]),
+	swaggerUi.setup(specs)
+);
 
-app.use('/', router)
+/* ---------------------------------- RUTAS ---------------------------------- */
+app.use('/', router);
 
-app.get('/', (req:Request, res:Response) => {
+app.get('/', (req: Request, res: Response) => {
 	res.send('hola...');
 });
 
+/* ------------------------------- CRON JOBS --------------------------------- */
+cron.schedule('00 07 * * *', async () => {
+	const result = await getAccountsWithDate();
+	if (result.length === 0) return;
 
+	result.forEach((info: infoMessage) => {
+		sendMessage(info);
+	});
 
-cron.schedule('00 07 * * *', async ()=>{
-	const result = await getAccountsWithDate()
+	console.log(result);
+});
 
-	if(result.length==0){
-		return
-	}
-	result.map((info:infoMessage)=>{
-		sendMessage(info)
-	})
-	
-	console.log(result)
-})
-
+/* ------------------------------- SERVIDOR ---------------------------------- */
+app.listen(PORT, () => {
+	console.log(`✅ Server is running on port ${PORT}`);
+});
