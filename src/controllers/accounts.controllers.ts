@@ -109,10 +109,15 @@ async function addAccount(req: Request, res: Response) {
 	try {
 
 		const newaccount = { id: uuid(), ...account }
+		const categoryID = account.id_category;
+		const categoryInfo = await db
+			.collection('categories_account')
+			.where('id', '==', categoryID)
+			.get();
+
 		await
 		db.collection('accounts').add(newaccount);
 
-		// buscar usuario por user_id y modificar accounts array
 		const user = await db
 			.collection('users')
 			.where('id', '==', account.id_user)
@@ -122,7 +127,7 @@ async function addAccount(req: Request, res: Response) {
 			const userData = user.docs[0].data();
 
 			const accounts = userData.accounts || [];
-			accounts.push(newaccount);
+			accounts.push({ ...newaccount, category: categoryInfo.docs[0]?.data().category_name });
 			await db.collection('users').doc(user.docs[0].id).update({
 				accounts: accounts,
 			});
