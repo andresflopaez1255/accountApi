@@ -198,7 +198,7 @@ router.post(Routes.updateUser, jsonParser, updateUser);
  *     - in: query
  *       name: id
  *       schema:
- *        type: integer
+ *        type: string
  *       required: true
  *       
  *       
