@@ -2,13 +2,14 @@ import { Request, Response } from 'express';
 import prisma from '../utils/dbClient';
 import messageBody from '../utils/messageBody';
 import { MessagesCategories } from '../utils/messages';
+import { getAllCategoriesUseCase } from '../usecases/categories/getAllCategories.usecase';
 
 
 
 async function getCategories(_req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>  {
 	try {
-		const allCategories = await prisma.categories_account.findMany();
-		
+		const allCategories = await getAllCategoriesUseCase();
+		console.log(allCategories)
 		if (!allCategories.length) {
 			return res.status(200).send(messageBody(allCategories, MessagesCategories.notSuccessful, true));
 		}else {
@@ -28,7 +29,7 @@ async function addCategory(req:Request, res: Response) {
 	try {
 		const CategoryIfExist = await prisma.categories_account.findFirst({
 			where: {
-               category_name: category.category_name
+				category_name: category.category_name
 			}
 		}).catch(console.log)
 		console.log(CategoryIfExist)

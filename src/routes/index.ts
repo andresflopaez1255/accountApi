@@ -223,10 +223,31 @@ router.post(Routes.updateUser, jsonParser, updateUser);
   */
 router.delete(`${Routes.deleteUser}`, deleteUser);
 
-// categories endpoints
+// generate docs for categories endpoints
+
+/**
+ * @swagger
+ * /categories:
+ *   get:
+ *     summary: Returns all categories
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: the list of the categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                $ref: '#components/schemas/Response'
+ *               
+ *
+ *
+ */
+
 router.get(Routes.categories, getCategories);
 
-router.post(Routes.addCategory,jsonParser, addCategory, );
+router.post(Routes.addCategory, jsonParser, addCategory,);
 
 //accounts endpoints
 

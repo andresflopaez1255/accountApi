@@ -9,10 +9,12 @@ export const getAllAccountsUseCase = async () => {
 	const enrichedAccounts = await Promise.all(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		accounts.map(async (account: any) => {
-			const userInfo = await useCaseSpecificDataUser('id', account.id_user);
-			const categoryData = await getCategoryUseCase(account.id_category);
 			
-
+			const categoryData = await getCategoryUseCase(account.id_category);
+		
+			const userInfo = await useCaseSpecificDataUser('id', account.id_user);
+			
+			
 			const userData = userInfo.empty ? null : userInfo.docs[0].data();
 			
 			return {
