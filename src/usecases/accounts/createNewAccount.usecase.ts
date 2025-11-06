@@ -8,7 +8,7 @@ import { Account } from '../../Interfaces';
 export const createNewAccountUseCase = async (account: Account) => {
 	const newaccount:Account = { id: uuid(), ...account }
 	const categoryID = account.id_category;
-	const categoryInfo = await getCategoryUseCase(categoryID);
+	const categoryInfo = await getCategoryUseCase('id', categoryID);
 	await db.collection('accounts').add(newaccount);
 	const user = await useCaseSpecificDataUser('id', account.id_user);
 

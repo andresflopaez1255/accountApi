@@ -12,6 +12,7 @@ import { getAccountsWithDate } from './controllers/accounts.controllers';
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
 import { specs } from './swagger';
+import { managerBotController } from './controllers/bot.controllers';
 
 const app: Express = express();
 
@@ -72,3 +73,5 @@ cron.schedule('00 07 * * *', async () => {
 app.listen(PORT, () => {
 	console.log(`✅ Server is running on port ${PORT}`);
 });
+
+managerBotController();

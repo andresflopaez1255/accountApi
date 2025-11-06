@@ -1,9 +1,10 @@
 import { db } from '../../firebase';
 
-export const getCategoryUseCase = async (categoryId: string) => {
+export const getCategoryUseCase = async (categoryQuery:string, categoryParam: string) => {
+	console.log(categoryParam)
 	const categorySnapshot = await db
 		.collection('categories_account')
-		.where('id', '==', categoryId)
+		.where(categoryQuery, '==', categoryParam)
 		.get();
 
 	if (categorySnapshot.empty) {

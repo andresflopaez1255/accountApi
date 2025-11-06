@@ -1,0 +1,249 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { Telegraf } from 'telegraf';
+import { v4 as uuid } from 'uuid';
+
+import { getCategoryUseCase } from '../usecases/categories/getCategory.usecase';
+import { useCaseSpecificDataUser } from '../usecases/users/specificDataUser.usecase';
+import { createNewAccountUseCase } from '../usecases/accounts/createNewAccount.usecase';
+import { db } from '../firebase';
+import { capitalize } from '../utils/capitalizeString';
+import { formatAccountMessage } from '../utils/parseAccountsData';
+import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
+import { Account } from '../Interfaces';
+
+// Guarda el estado actual por usuario
+// Guarda el estado actual por usuario
+type UserAccountData = {
+	email: string;
+	password: string;
+	profile: string;
+	pin: string;
+	expiration: string;
+	clientName: string;
+};
+
+type UserSession = {
+	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER'| 'WAITING_ACCOUNT_GARANTY' | 'WAITING_EMAIL_GARANTY';
+	categoryId?: string;
+	accountData?: UserAccountData;
+};
+
+const userSessions: Record<number, UserSession | undefined> = {};
+export const managerBotController = async () => {
+	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
+   
+	bot.launch();
+	bot.telegram.setMyCommands([
+		{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
+		{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
+		{command: 'garantia', description: 'actualizar cuenta  por garantia' },
+		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
+	]);
+	// Comando para iniciar creación
+	bot.command('crear_cuenta', async (ctx) => {
+		userSessions[ctx.chat.id] = { step: 'WAITING_CATEGORY' };
+		ctx.reply('📂 Ingresa la *categoría* de la cuenta:', { parse_mode: 'Markdown' });
+	});
+
+	bot.command('garantia', async (ctx) => {
+		userSessions[ctx.chat.id] = { step: 'WAITING_ACCOUNT_GARANTY' };
+		await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía o actualizar los datos:');
+	});
+
+
+	bot.on('text', async (ctx): Promise<void> => {
+		const session = userSessions[ctx.chat.id];
+
+		if (!session) return; // si no está en flujo, ignorar
+
+		switch (session.step) {
+
+		case 'WAITING_EMAIL_GARANTY': {
+			session.step = 'WAITING_ACCOUNT_GARANTY';
+			await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía por 30 días adicionales:');
+			break;
+		}
+
+		case 'WAITING_CATEGORY': {
+			const category = capitalize(ctx.message.text.trim());
+			console.log(category)
+			const categoryData = await getCategoryUseCase('category_name', category);
+			console.log(categoryData)
+
+			if (!categoryData) {
+				await ctx.reply('❌ Categoría no encontrada. Intenta nuevamente.');
+				return;
+			}
+
+			session.categoryId = categoryData.id;
+			session.step = 'WAITING_ACCOUNT_DATA';
+
+			await ctx.reply('✉️ Envía los datos de la cuenta con este formato:\n\n`correo contraseña perfil pin XXXX Válido hasta DD/MM/YYYY hh:mm am/pm -05\nCliente : Nombre`', { parse_mode: 'Markdown' });
+			break;
+		}
+
+		case 'WAITING_ACCOUNT_DATA': {
+			const regex = /(.*?)\s+(\S+)\s+(\d+)\s+pin\s+(\d+)\s+Válido hasta\s+(.*?)\s*Cliente\s*:\s*(.*)/i;
+			const match = ctx.message.text.match(regex);
+
+			if (!match) {
+				await ctx.reply('⚠ Formato no reconocido. Por favor sigue el ejemplo correctamente.');
+				return;
+			}
+
+			const [_, email, password, profile, pin, expiration, clientName] = match;
+
+			const userData = await useCaseSpecificDataUser('name_user', clientName.trim());
+			session.accountData = { email, password, profile, pin, expiration, clientName };
+
+			if (userData.empty) {
+				session.step = 'WAITING_NEW_USER';
+				await ctx.reply(`👤 El cliente "${clientName}" no existe.\nPor favor envíame su teléfono y correo con este formato:\n\n📞 3001234567 📧 cliente@ejemplo.com`);
+				return;
+			}
+
+			// si existe, crea cuenta directamente
+			const newAccount = await createNewAccountUseCase({
+				email_account: email,
+				pass_account: password,
+				name_profile: profile,
+				code_profile: parseInt(pin, 10),
+				expiration_date: expiration,
+				id_user: userData.docs[0].data().id,
+				id_category: session.categoryId!,
+			});
+
+		
+			await ctx.reply(`✅ Cuenta para *${clientName}* creada con éxito.`, { parse_mode: 'Markdown' });
+			userSessions[ctx.chat.id] = undefined;
+			const plantilla = formatAccountMessage(
+				{usuario: newAccount.email_account,
+					clave: newAccount.pass_account,
+					perfil: newAccount.name_profile,
+					pin: newAccount.code_profile,
+					vence: newAccount.expiration_date,
+				}
+			);
+			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
+			break;
+		}
+
+		case 'WAITING_NEW_USER': {
+			const parts = ctx.message.text.split(/\s+/);
+			const phone = parts[0];
+			
+
+			const account = session.accountData;
+			if (!account) {
+			// If account data is missing, inform user and reset session
+				userSessions[ctx.chat.id] = undefined;
+				await ctx.reply('❌ Datos de la cuenta faltan. Por favor reinicia el proceso con /crear_cuenta.');
+				return;
+			}
+
+			const { clientName } = account;
+
+			const newUser = {
+				id: uuid(),
+				name_user: clientName,
+				cellphone_user: phone,
+				email_user: null,
+			};
+
+			await db.collection('users').add(newUser);
+
+			await createNewAccountUseCase({
+				email_account: account.email,
+				pass_account: account.password,
+				name_profile: account.profile,
+				code_profile: parseInt(account.pin, 10),
+				expiration_date: account.expiration,
+				id_user: newUser.id,
+				id_category: session.categoryId!,
+			});
+
+			await ctx.reply(`✅ Usuario *${clientName}* y su cuenta fueron creados correctamente.`, { parse_mode: 'Markdown' });
+			// Limpia la sesión del usuario
+			userSessions[ctx.chat.id] = undefined;
+			const plantilla = formatAccountMessage(
+				{usuario: account.email,
+					clave: account.password,
+					perfil: account.profile,
+					pin: account.pin,
+					vence: account.expiration,
+				}
+			);
+			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
+		
+		
+			break;
+		}
+
+		case 'WAITING_ACCOUNT_GARANTY': {
+			const rawMessage = ctx.message.text;
+			const message = rawMessage.replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
+
+			// 🧩 Extraer el correo de la cuenta anterior
+			const oldEmailMatch = message.match(/cuenta[_:\s]+([^\s]+)/i);
+			if (!oldEmailMatch) {
+				await ctx.reply('⚠️ No se pudo detectar el correo anterior. Asegúrate de seguir el formato correcto.');
+				return;
+			}
+			const oldEmail = oldEmailMatch[1].trim();
+
+			// 🔍 Buscar la cuenta anterior
+			const accountsSnapshot = await db.collection('accounts').where('email_account', '==', oldEmail).get();
+
+			if (accountsSnapshot.empty) {
+				await ctx.reply(`❌ No se encontró ninguna cuenta con el correo *${oldEmail}*.`);
+				return;
+			}
+
+			const accountDoc = accountsSnapshot.docs[0];
+			const accountData = accountDoc.data() as Account;
+
+			// 🧠 Extraer los nuevos datos del mensaje
+			const newEmail = message.match(/Correo:\s*([^\s]+)/i)?.[1]?.trim() || accountData.email_account;
+			const newPassword = message.match(/Clave:\s*([^\s]+)/i)?.[1]?.trim() || accountData.pass_account;
+			const newProfile = message.match(/Perfil\s*#?\s*(\S+)/i)?.[1]?.trim() || accountData.name_profile;
+			const newPin = message.match(/pin\s*(\d+)/i)?.[1]?.trim() || accountData.code_profile;
+			const newExpiration = message.match(/Vence:\s*([^\n]+)/i)?.[1]?.trim() || accountData.expiration_date;
+
+			// 🛠️ Actualizar la cuenta en Firestore
+			await updateAccountUseCase({
+				...accountData,
+				email_account: newEmail,
+				pass_account: newPassword,
+				name_profile: newProfile,
+				code_profile: parseInt(newPin.toString(), 10),
+				expiration_date: newExpiration,
+			});
+
+	
+			const plantilla = formatAccountMessage(
+				{usuario: newEmail,
+					clave: newPassword,
+					perfil: newProfile,
+					pin: newPin,
+					vence: newExpiration,
+				}
+			);
+
+			console.log(newEmail)
+			await ctx.reply(`✅ La cuenta *${newEmail}* ha sido actualizada exitosamente.`, { parse_mode: 'Markdown' });
+
+			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
+			userSessions[ctx.chat.id] = undefined;
+			break;
+		}
+
+		}
+	});
+
+	
+
+
+
+	
+
+}

@@ -4,6 +4,8 @@ import { useCaseSpecificDataUser } from '../users/specificDataUser.usecase';
 import { getSpecificAccountUseCase } from './getSpecificAccount.usecase';
 
 export const updateAccountUseCase = async (account: Account) => {
+
+	console.log(account)
 	
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const accountDoc = await getSpecificAccountUseCase(account.id!);

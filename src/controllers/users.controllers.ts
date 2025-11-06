@@ -40,16 +40,11 @@ async function addUser(req: Request, res: Response) {
 
 	try {
 		if (!userIfExist.exists) {
-			// buscar cuentas por id de usuario en firebase en accounts
-			const accounts = await db
-				.collection('accounts')
-				.where('cellphone_user', '==', user.cellphone_user)
-				.get();
-
+			
 			db.collection('users').add({
 				id: uuid(),
 				...user,
-				accounts: accounts.docs.length > 0 ? accounts.docs : [],
+				accounts:  [],
 			});
 
 			res.status(200).json(messageBody(null, MessagesUsers.created, true));

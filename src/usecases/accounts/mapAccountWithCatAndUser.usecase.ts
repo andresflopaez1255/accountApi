@@ -6,7 +6,7 @@ const mapAccountWithCatAndUserUseCase = async (accounts: FirebaseFirestore.Docum
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		accounts.map(async (account: any) => {
 			
-			const categoryData = await getCategoryUseCase(account.id_category);
+			const categoryData = await getCategoryUseCase('id', account.id_category);
 		
 			const userInfo = await useCaseSpecificDataUser('id', account.id_user);
 			
