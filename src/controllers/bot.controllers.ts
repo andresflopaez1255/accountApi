@@ -38,7 +38,7 @@ export const managerBotController = async () => {
 		{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
 		{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
 		{command: 'garantia', description: 'actualizar cuenta  por garantia' },
-		{command: 'search_cuentas', description: 'Buscar cuentas por correo o cliente' },
+		{command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
 		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
 	]);
 	// Comando para iniciar creación
