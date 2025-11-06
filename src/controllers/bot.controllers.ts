@@ -11,8 +11,7 @@ import { formatAccountMessage } from '../utils/parseAccountsData';
 import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
 import { Account } from '../Interfaces';
 
-// Guarda el estado actual por usuario
-// Guarda el estado actual por usuario
+
 type UserAccountData = {
 	email: string;
 	password: string;
