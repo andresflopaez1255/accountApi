@@ -39,6 +39,7 @@ export const managerBotController = async () => {
 		{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
 		{command: 'garantia', description: 'actualizar cuenta  por garantia' },
 		{command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
+		{command: 'cancelar', description: 'Cancelar el proceso actual' },
 		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
 	]);
 	// Comando para iniciar creación
@@ -52,7 +53,13 @@ export const managerBotController = async () => {
 		await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía o actualizar los datos:');
 	});
 
-	bot.command('search_cuentas', async (ctx) => {
+	bot.command('cancelar', async (ctx) => {
+		userSessions[ctx.chat.id] = undefined;
+		await ctx.reply('❌ Proceso cancelado. Puedes iniciar un nuevo proceso cuando desees.');	
+	});
+	
+
+	bot.command('buscar_cuentas', async (ctx) => {
 		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
 		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
 	});
