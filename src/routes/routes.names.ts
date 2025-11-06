@@ -10,11 +10,13 @@ enum Routes {
   addUser = '/new_user',
   updateUser = '/update_user',
   deleteUser = '/delete_user',
+  searchUser = '/search_user',
   //accounts
   accounts = '/accounts',
   addAccount = '/new_account',
   updateAccount = '/update_account',
   deleteAccount = '/delete_account',
+  searchAccount = '/search_account',
   // auth vendors
   register_vendors = '/sign_in_vendors',
   logIn_vendor ='/log_in_vendors',

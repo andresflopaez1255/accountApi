@@ -10,6 +10,7 @@ import { getAllAccountsUseCase } from '../usecases/accounts/getAllAccounts.useca
 import { createNewAccountUseCase } from '../usecases/accounts/createNewAccount.usecase';
 import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
 import { deleteAccountUseCase } from '../usecases/accounts/deleteAccont.usecase';
+import { seacrhDataAccountsUseCase } from '../usecases/accounts/searchDataAccounts.usecase';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAllAccounts(
 	req: Request,
@@ -127,10 +128,25 @@ async function deleteAccount(req: Request, res: Response) {
 	}
 }
 
+async function searchAccount(req: Request, res: Response) {
+	res.setHeader('Content-Type', 'application/json');
+	const params = req.query.q as string;
+	try {
+		const result = await seacrhDataAccountsUseCase(params);
+		console.log(result)
+		
+		res.status(200).json(messageBody(result, MessagesAccounts.updated, true));
+	} catch (error) {
+		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
+	}
+	
+}
+
 export {
 	getAllAccounts,
 	getAccountsWithDate,
 	addAccount,
 	updateAccount,
 	deleteAccount,
+	searchAccount
 };

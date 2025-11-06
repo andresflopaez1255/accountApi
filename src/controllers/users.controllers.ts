@@ -3,6 +3,7 @@ import messageBody from '../utils/messageBody';
 import { MessagesUsers } from '../utils/messages';
 import { db } from '../firebase';
 import { v4 as uuid } from 'uuid';
+import { searchUserDataUseCase } from '../usecases/users/searchUserData.usecase';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 async function getUsers(
@@ -114,4 +115,17 @@ async function deleteUser(req: Request, res: Response) {
 		res.status(400).json(messageBody(error, MessagesUsers.error, false));
 	}
 }
-export { getUsers, addUser, updateUser, deleteUser };
+
+async function searchUsers(req: Request, res: Response) {
+	
+	res.setHeader('Content-Type', 'application/json');
+	const params = req.query.q as string;
+	try {
+		const result = await searchUserDataUseCase(params);
+		console.log(result)
+		res.status(200).json(messageBody(result, MessagesUsers.updated, true));
+	} catch (error) {
+		res.status(400).json(messageBody(error, MessagesUsers.error, false));
+	}
+}
+export { getUsers, addUser, updateUser, deleteUser, searchUsers };

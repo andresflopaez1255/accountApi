@@ -3,6 +3,7 @@ import {
 	addAccount,
 	deleteAccount,
 	getAllAccounts,
+	searchAccount,
 	updateAccount,
 } from '../controllers/accounts.controllers';
 import { vendorLogIn, vendorRecoveryPass, vendorRegistration } from '../controllers/auth.controllers';
@@ -11,6 +12,7 @@ import {
 	addUser,
 	deleteUser,
 	getUsers,
+	searchUsers,
 	updateUser,
 } from '../controllers/users.controllers';
 import Routes from './routes.names';
@@ -222,6 +224,7 @@ router.post(Routes.updateUser, jsonParser, updateUser);
  * 
   */
 router.delete(`${Routes.deleteUser}`, deleteUser);
+router.get(Routes.searchUser, searchUsers);
 
 // generate docs for categories endpoints
 
@@ -356,6 +359,7 @@ router.delete(`${Routes.deleteAccount}`, deleteAccount);
  *
  */
 router.post(Routes.updateAccount, jsonParser, updateAccount);
+router.get(Routes.searchAccount, searchAccount);
 router.post(Routes.register_vendors, jsonParser, vendorRegistration);
 router.post(Routes.logIn_vendor, jsonParser, vendorLogIn);
 router.post(Routes.recovery_vendors, jsonParser, vendorRecoveryPass);
