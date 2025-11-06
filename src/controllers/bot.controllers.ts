@@ -10,6 +10,7 @@ import { capitalize } from '../utils/capitalizeString';
 import { formatAccountMessage } from '../utils/parseAccountsData';
 import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
 import { Account } from '../Interfaces';
+import { seacrhDataAccountsUseCase } from '../usecases/accounts/searchDataAccounts.usecase';
 
 
 type UserAccountData = {
@@ -22,7 +23,8 @@ type UserAccountData = {
 };
 
 type UserSession = {
-	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER'| 'WAITING_ACCOUNT_GARANTY' | 'WAITING_EMAIL_GARANTY';
+	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER'| 'WAITING_ACCOUNT_GARANTY' 
+	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT'  ;
 	categoryId?: string;
 	accountData?: UserAccountData;
 };
@@ -36,6 +38,7 @@ export const managerBotController = async () => {
 		{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
 		{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
 		{command: 'garantia', description: 'actualizar cuenta  por garantia' },
+		{command: 'search_cuentas', description: 'Buscar cuentas por correo o cliente' },
 		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
 	]);
 	// Comando para iniciar creación
@@ -49,6 +52,10 @@ export const managerBotController = async () => {
 		await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía o actualizar los datos:');
 	});
 
+	bot.command('search_cuentas', async (ctx) => {
+		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
+		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
+	});
 
 	bot.on('text', async (ctx): Promise<void> => {
 		const session = userSessions[ctx.chat.id];
@@ -61,6 +68,41 @@ export const managerBotController = async () => {
 			session.step = 'WAITING_ACCOUNT_GARANTY';
 			await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía por 30 días adicionales:');
 			break;
+		}
+
+		case  'WAITTING_SEARCH_ACCOUNT': {
+			const searchQuery = ctx.message.text.trim();
+			const results = (await seacrhDataAccountsUseCase(searchQuery)) as Account[];
+
+			if (results.length === 0) {
+				await ctx.reply('❌ No se encontraron cuentas que coincidan con la búsqueda. Intenta nuevamente.');
+				return;
+			}
+
+			let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
+
+			if (results.length == 1) {
+				const plantilla = formatAccountMessage(
+					{usuario: results[0].email_account,
+						clave: results[0].pass_account,
+						perfil: results[0].name_profile,
+						pin: results[0].code_profile,
+						vence: results[0].expiration_date,
+					}
+				);
+				await ctx.reply(plantilla, { parse_mode: 'Markdown' });
+				userSessions[ctx.chat.id] = undefined; // limpiar sesión
+				return;
+			}
+			results.forEach((account, index) => {
+
+				responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
+			});
+
+			await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
+			userSessions[ctx.chat.id] = undefined; // limpiar sesión
+			break;
+
 		}
 
 		case 'WAITING_CATEGORY': {
