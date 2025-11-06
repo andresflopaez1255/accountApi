@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Telegraf } from 'telegraf';
-import type { Express } from 'express';
+import {  Telegraf } from 'telegraf';
 import { v4 as uuid } from 'uuid';
 
 import { getCategoryUseCase } from '../usecases/categories/getCategory.usecase';
@@ -31,15 +30,9 @@ type UserSession = {
 };
 
 const userSessions: Record<number, UserSession | undefined> = {};
-export const managerBotController = async (app:Express) => {
+export const managerBotController = async () => {
 	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
-	const webhookPath = `/bot${bot.secretPathComponent()}`;
-	app.use(bot.webhookCallback(webhookPath));
-
-	const webhookUrl = `https://accountapi-8smd.onrender.com${webhookPath}`;
-	bot.telegram.setWebhook(webhookUrl);
-
-	console.log(`🤖 Webhook configurado en ${webhookUrl}`);
+	
    
 	
 	// Comando para iniciar creación
@@ -287,6 +280,10 @@ export const managerBotController = async (app:Express) => {
 
 		}
 
+
+
+		bot.launch();
+
 		
 		bot.telegram.setMyCommands([
 			{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
@@ -296,6 +293,7 @@ export const managerBotController = async (app:Express) => {
 			{command: 'cancelar', description: 'Cancelar el proceso actual' },
 			{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
 		]);
+		userSessions[ctx.chat.id] = undefined;
 	});
 
 	

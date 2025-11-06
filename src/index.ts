@@ -17,7 +17,7 @@ import { managerBotController } from './controllers/bot.controllers';
 const app: Express = express();
 
 /* ----------------------------- CONFIGURACIONES ----------------------------- */
-const PORT = process.env.PORT || 3001;
+const port = process.env.PORT || 4000 
 
 const corsOptions = {
 	credentials: true,
@@ -70,7 +70,8 @@ cron.schedule('00 07 * * *', async () => {
 });
 
 /* ------------------------------- SERVIDOR ---------------------------------- */
-app.listen(PORT, () => {
-	console.log(`✅ Server is running on port ${PORT}`);
+app.listen(port, () => {
+	console.log(`✅ Server is running on port ${port	}`);
 });
 
+managerBotController();
