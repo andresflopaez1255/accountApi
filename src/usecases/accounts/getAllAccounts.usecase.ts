@@ -3,7 +3,7 @@ import { useCaseSpecificDataUser } from '../users/specificDataUser.usecase';
 import { getCategoryUseCase } from '../categories/getCategory.usecase';
 
 export const getAllAccountsUseCase = async () => {
-	const snapshot = await db.collection('accounts').get();
+	const snapshot = await db.collection('accounts').orderBy('expiration_date', 'desc').get();
 	const accounts = snapshot.docs.map(doc => doc.data());
 
 	const enrichedAccounts = await Promise.all(
