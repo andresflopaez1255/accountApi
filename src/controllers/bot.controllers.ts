@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import {  Telegraf } from 'telegraf';
+import { Telegraf } from 'telegraf';
 import { v4 as uuid } from 'uuid';
 import type { Express } from 'express';
 
@@ -12,6 +12,7 @@ import { formatAccountMessage } from '../utils/parseAccountsData';
 import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
 import { Account } from '../Interfaces';
 import { seacrhDataAccountsUseCase } from '../usecases/accounts/searchDataAccounts.usecase';
+import { getAccountsWithDateExpitarion } from './accounts.controllers';
 
 
 type UserAccountData = {
@@ -24,14 +25,14 @@ type UserAccountData = {
 };
 
 type UserSession = {
-	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER'| 'WAITING_ACCOUNT_GARANTY' 
-	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT'  ;
+	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER' | 'WAITING_ACCOUNT_GARANTY'
+	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT' | 'WAITTING_UPCOMING_DUE';
 	categoryId?: string;
 	accountData?: UserAccountData;
 };
 
 const userSessions: Record<number, UserSession | undefined> = {};
-export const managerBotController = async (app:Express) => {
+export const managerBotController = async (app: Express) => {
 	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
 	const webhookPath = `/bot${bot.secretPathComponent()}`;
 	app.use(bot.webhookCallback(webhookPath));
@@ -40,9 +41,9 @@ export const managerBotController = async (app:Express) => {
 	bot.telegram.setWebhook(webhookUrl);
 
 	console.log(`🤖 Webhook configurado en ${webhookUrl}`);
-	
-   
-	
+
+
+
 	// Comando para iniciar creación
 	bot.command('crear_cuenta', async (ctx) => {
 		userSessions[ctx.chat.id] = { step: 'WAITING_CATEGORY' };
@@ -56,14 +57,19 @@ export const managerBotController = async (app:Express) => {
 
 	bot.command('cancelar', async (ctx) => {
 		userSessions[ctx.chat.id] = undefined;
-		await ctx.reply('❌ Proceso cancelado. Puedes iniciar un nuevo proceso cuando desees.');	
+		await ctx.reply('❌ Proceso cancelado. Puedes iniciar un nuevo proceso cuando desees.');
 	});
-	
+
 
 	bot.command('buscar_cuentas', async (ctx) => {
 		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
 		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
 	});
+
+	bot.command('proximos_vencer', async (ctx) => {
+		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
+		await ctx.reply('🔍 Buscando cuentas proximas a vencer');
+	})
 
 	bot.on('text', async (ctx): Promise<void> => {
 		const session = userSessions[ctx.chat.id];
@@ -78,7 +84,7 @@ export const managerBotController = async (app:Express) => {
 			break;
 		}
 
-		case  'WAITTING_SEARCH_ACCOUNT': {
+		case 'WAITTING_SEARCH_ACCOUNT': {
 			const searchQuery = ctx.message.text.trim();
 			const results = (await seacrhDataAccountsUseCase(searchQuery)) as Account[];
 
@@ -91,7 +97,8 @@ export const managerBotController = async (app:Express) => {
 
 			if (results.length == 1) {
 				const plantilla = formatAccountMessage(
-					{usuario: results[0].email_account,
+					{
+						usuario: results[0].email_account,
 						clave: results[0].pass_account,
 						perfil: results[0].name_profile,
 						pin: results[0].code_profile,
@@ -162,11 +169,12 @@ export const managerBotController = async (app:Express) => {
 				id_category: session.categoryId!,
 			});
 
-		
+
 			await ctx.reply(`✅ Cuenta para *${clientName}* creada con éxito.`, { parse_mode: 'Markdown' });
 			userSessions[ctx.chat.id] = undefined;
 			const plantilla = formatAccountMessage(
-				{usuario: newAccount.email_account,
+				{
+					usuario: newAccount.email_account,
 					clave: newAccount.pass_account,
 					perfil: newAccount.name_profile,
 					pin: newAccount.code_profile,
@@ -180,11 +188,11 @@ export const managerBotController = async (app:Express) => {
 		case 'WAITING_NEW_USER': {
 			const parts = ctx.message.text.split(/\s+/);
 			const phone = parts[0];
-			
+
 
 			const account = session.accountData;
 			if (!account) {
-			// If account data is missing, inform user and reset session
+				// If account data is missing, inform user and reset session
 				userSessions[ctx.chat.id] = undefined;
 				await ctx.reply('❌ Datos de la cuenta faltan. Por favor reinicia el proceso con /crear_cuenta.');
 				return;
@@ -215,7 +223,8 @@ export const managerBotController = async (app:Express) => {
 			// Limpia la sesión del usuario
 			userSessions[ctx.chat.id] = undefined;
 			const plantilla = formatAccountMessage(
-				{usuario: account.email,
+				{
+					usuario: account.email,
 					clave: account.password,
 					perfil: account.profile,
 					pin: account.pin,
@@ -223,8 +232,8 @@ export const managerBotController = async (app:Express) => {
 				}
 			);
 			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
-		
-		
+
+
 			break;
 		}
 
@@ -268,9 +277,10 @@ export const managerBotController = async (app:Express) => {
 				expiration_date: newExpiration,
 			});
 
-	
+
 			const plantilla = formatAccountMessage(
-				{usuario: newEmail,
+				{
+					usuario: newEmail,
 					clave: newPassword,
 					perfil: newProfile,
 					pin: newPin,
@@ -286,28 +296,39 @@ export const managerBotController = async (app:Express) => {
 			break;
 		}
 
+		case 'WAITTING_UPCOMING_DUE': {
+			const data = await getAccountsWithDateExpitarion()
+			let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
+			data.forEach((account, index) => {
+
+				responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
+			});
+			ctx.reply(responseMessage)
+		}
+
 		}
 
 
 
 		bot.launch();
 
-		
+
 		bot.telegram.setMyCommands([
 			{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
 			{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
-			{command: 'garantia', description: 'actualizar cuenta  por garantia' },
-			{command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
-			{command: 'cancelar', description: 'Cancelar el proceso actual' },
+			{ command: 'garantia', description: 'actualizar cuenta  por garantia' },
+			{ command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
+			{ command: 'proximos_vencer', description: 'Proximas cuentas a vencer' },
+			{ command: 'cancelar', description: 'Cancelar el proceso actual' },
 			{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
 		]);
 		userSessions[ctx.chat.id] = undefined;
 	});
 
-	
 
 
 
-	
+
+
 
 }
