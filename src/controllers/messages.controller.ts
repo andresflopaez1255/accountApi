@@ -1,23 +1,31 @@
-import messagebird from 'messagebird';
-import { infoMessage } from '../Interfaces';
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-const sender = messagebird(process.env.TOKEN!)
-console.log(process.env.TOKEN)
-const sendMessage = (info:infoMessage) => {
-	const params = {
-		originator: 'TestMessage',
-		recipients: [info.cellphone_user],
-		body: `Hola ${info.name_user} te escribimos desde AF Entretimiento\n \nQueremos recordarte que tu servicio de ${info.category} vence el dia ${info.expiration_date}.\n\nSi deseas renovarla o adquierir alguno denuestros servicios comunicate a +57 312 874 4662 😁`,
+import { messaging } from '../firebase';
+
+
+const sendMessage = async (noti: any) => {
+
+	const message = {
+
+		topic: 'expiraciones',
+		data: {
+			title: 'Cuenta por vencer',
+			body: 'Haz clic para contactar al cliente',
+			service: noti.category_name,
+			cellphone_user: noti.cellphone_user,
+			email_account: noti.email_account
+		},
+
 	};
-	sender.messages.create(params, function (err, response) {
-		if (err) {
-			return console.log(err);
-		}
-		console.log(response);
-	});
-	
-};
+
+	try {
+		await messaging.send(message);
+		console.log(`✅ Notificación enviada: ${noti.email_account || noti.id}`);
+	} catch (error) {
+		console.error('❌ Error al enviar notificación:', error);
+	}
+}
+
+
 
 
 

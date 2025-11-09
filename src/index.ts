@@ -8,7 +8,7 @@ import * as swaggerUi from 'swagger-ui-express';
 import 'dotenv/config';
 
 import router from './routes';
-import { getAccountsWithDate } from './controllers/accounts.controllers';
+import { getAccountsWithDateExpitarion } from './controllers/accounts.controllers';
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
 import { specs } from './swagger';
@@ -58,12 +58,12 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 /* ------------------------------- CRON JOBS --------------------------------- */
-cron.schedule('00 07 * * *', async () => {
-	const result = await getAccountsWithDate();
+cron.schedule('0 9 * * *', async () => {
+	const result = await getAccountsWithDateExpitarion();
 	if (result.length === 0) return;
 
-	result.forEach((info: infoMessage) => {
-		sendMessage(info);
+	result.forEach(async (info: infoMessage) => {
+		await sendMessage(info);
 	});
 
 	console.log(result);

@@ -2,8 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* import { categories_account, Prisma, user } from '@prisma/client';
  */ import { Request, Response } from 'express';
-import moment from 'moment';
-import prisma from '../utils/dbClient';
+
 import messageBody from '../utils/messageBody';
 import { MessagesAccounts } from '../utils/messages';
 import { getAllAccountsUseCase } from '../usecases/accounts/getAllAccounts.usecase';
@@ -11,6 +10,10 @@ import { createNewAccountUseCase } from '../usecases/accounts/createNewAccount.u
 import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
 import { deleteAccountUseCase } from '../usecases/accounts/deleteAccont.usecase';
 import { seacrhDataAccountsUseCase } from '../usecases/accounts/searchDataAccounts.usecase';
+import { db } from '../firebase';
+import moment from 'moment';
+import { useCaseSpecificDataUser } from '../usecases/users/specificDataUser.usecase';
+import { getCategoryUseCase } from '../usecases/categories/getCategory.usecase';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAllAccounts(
 	req: Request,
@@ -37,50 +40,37 @@ async function getAllAccounts(
 	}
 }
 
-async function getAccountsWithDate() {
+async function getAccountsWithDateExpitarion() {
 	try {
-		const date = moment().format('L');
-		const after2daysFromToday = moment().add(1, 'days').format('L');
-		console.log(after2daysFromToday);
-		const allAccounts: any = await prisma.$queryRaw`
-         SELECT * FROM accounts WHERE  expiration_date >= ${date} AND expiration_date <= ${after2daysFromToday}
-        `;
-		const dataAccounts: any = [];
-		for (let index = 0; index < allAccounts.length; index++) {
-			const account = allAccounts[index];
+	
+		const snapshot = await db.collection('accounts').get();
+		const accountsToNotify: any[] = await Promise.all(
+			snapshot.docs.map(async (doc) => {
 
-			const userInfo = await prisma.users.findFirst({
-				select: {
-					cellphone_user: true,
-					name_user: true,
-				},
-				where: {
-					id: account.id_user,
-				},
-			});
-			const categoryInfo = await prisma.categories_account.findFirst({
-				select: {
-					category_name: true,
-				},
-				where: {
-					id: account.id_category,
-				},
-			});
-			console.log({
-				...account,
-				name_user: userInfo?.name_user,
-				cellphone_user: userInfo?.cellphone_user,
-				category: categoryInfo?.category_name,
-			});
-			dataAccounts.push({
-				...account,
-				name_user: userInfo?.name_user,
-				cellphone_user: userInfo?.cellphone_user,
-				category: categoryInfo?.category_name,
-			});
-		}
+				const data = doc.data();
+				const userData = await useCaseSpecificDataUser('id', data.id_user);
+				const categoryInfo = await getCategoryUseCase('id', data.id_category)
+				const userinfo = userData.docs[0].data();
+			
+				const expiration = moment(data.expiration_date, 'MM/DD/YYYY');
+				const limit = moment().add(2, 'days');
+				const today = moment();
 
-		return dataAccounts;
+				if (expiration.isSameOrBefore(limit, 'day') && expiration.isSameOrAfter(today, 'day')) {
+					const daysLeft = expiration.diff(today, 'days');
+					return { id: doc.id, cellphone_user: userinfo.cellphone_user,category_name: categoryInfo?.category_name, ...data, daysLeft };
+				}
+
+				return null; 
+			})
+		);
+
+	
+		const filteredAccounts = accountsToNotify.filter((a) => a !== null);
+
+	
+
+		return filteredAccounts;
 	} catch (error) {
 		return [];
 	}
@@ -144,7 +134,7 @@ async function searchAccount(req: Request, res: Response) {
 
 export {
 	getAllAccounts,
-	getAccountsWithDate,
+	getAccountsWithDateExpitarion,
 	addAccount,
 	updateAccount,
 	deleteAccount,
