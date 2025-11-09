@@ -303,7 +303,8 @@ export const managerBotController = async (app: Express) => {
 
 				responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
 			});
-			ctx.reply(responseMessage)
+			await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
+			userSessions[ctx.chat.id] = undefined; // limpiar sesión
 		}
 
 		}
