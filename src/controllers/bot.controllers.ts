@@ -67,7 +67,7 @@ export const managerBotController = async (app: Express) => {
 	});
 
 	bot.command('proximos_vencer', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
+		userSessions[ctx.chat.id] = { step: 'WAITTING_UPCOMING_DUE' };
 		await ctx.reply('🔍 Buscando cuentas proximas a vencer');
 	})
 
