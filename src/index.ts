@@ -69,6 +69,17 @@ cron.schedule('0 9 * * *', async () => {
 	console.log(result);
 });
 
+app.get('/expiration_cron',async ()=>{
+	const result = await getAccountsWithDateExpitarion();
+	if (result.length === 0) return;
+
+	result.forEach(async (info: infoMessage) => {
+		await sendMessage(info);
+	});
+
+	console.log(result);
+})
+
 /* ------------------------------- SERVIDOR ---------------------------------- */
 app.listen(port, () => {
 	console.log(`✅ Server is running on port ${port	}`);
