@@ -69,7 +69,7 @@ cron.schedule('0 9 * * *', async () => {
 	console.log(result);
 });
 
-app.get('/expiration_cron',async ()=>{
+app.get('/expiration_cron',async (req: Request, res: Response)=>{
 	const result = await getAccountsWithDateExpitarion();
 	if (result.length === 0) return;
 
@@ -78,6 +78,8 @@ app.get('/expiration_cron',async ()=>{
 	});
 
 	console.log(result);
+	
+	res.send('notification send')
 })
 
 /* ------------------------------- SERVIDOR ---------------------------------- */
