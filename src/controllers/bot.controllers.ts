@@ -26,7 +26,7 @@ type UserAccountData = {
 
 type UserSession = {
 	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER' | 'WAITING_ACCOUNT_GARANTY'
-	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT' | 'WAITTING_UPCOMING_DUE';
+	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT';
 	categoryId?: string;
 	accountData?: UserAccountData;
 };
@@ -67,8 +67,17 @@ export const managerBotController = async (app: Express) => {
 	});
 
 	bot.command('proximos_vencer', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITTING_UPCOMING_DUE' };
+		
 		await ctx.reply('🔍 Buscando cuentas proximas a vencer');
+
+		const data = await getAccountsWithDateExpitarion()
+		let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
+		data.forEach((account, index) => {
+			console.log(account)
+			responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
+		});
+		await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
+		userSessions[ctx.chat.id] = undefined; // limpiar sesión
 	})
 
 	bot.on('text', async (ctx): Promise<void> => {
@@ -296,22 +305,13 @@ export const managerBotController = async (app: Express) => {
 			break;
 		}
 
-		case 'WAITTING_UPCOMING_DUE': {
-			const data = await getAccountsWithDateExpitarion()
-			let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
-			data.forEach((account, index) => {
-
-				responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
-			});
-			await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
-			userSessions[ctx.chat.id] = undefined; // limpiar sesión
-		}
+		
 
 		}
 
 
 
-		bot.launch();
+		
 
 
 		bot.telegram.setMyCommands([
