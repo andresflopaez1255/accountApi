@@ -2,13 +2,14 @@
 import { messaging } from '../firebase';
 
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sendMessage = async (noti: any) => {
 
 	const message = {
 
 		topic: 'expiraciones',
 		data: {
-			title: 'Cuenta por vencer',
+			title: 'Cuenta por vencer '+noti.email_account,
 			body: 'Haz clic para contactar al cliente',
 			service: noti.category_name,
 			cellphone_user: noti.cellphone_user,
