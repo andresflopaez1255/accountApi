@@ -6,7 +6,7 @@ import { getSpecificAccountUseCase } from './getSpecificAccount.usecase';
 
 export const deleteAccountUseCase = async (id: string) => {
 	
-	const accountSnapshot = await getSpecificAccountUseCase(id);
+	const accountSnapshot = await getSpecificAccountUseCase('id',id);
 
 
 	if (!accountSnapshot) {

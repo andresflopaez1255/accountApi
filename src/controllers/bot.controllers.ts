@@ -8,25 +8,30 @@ import { useCaseSpecificDataUser } from '../usecases/users/specificDataUser.usec
 import { createNewAccountUseCase } from '../usecases/accounts/createNewAccount.usecase';
 import { db } from '../firebase';
 import { capitalize } from '../utils/capitalizeString';
-import { formatAccountMessage } from '../utils/parseAccountsData';
+import { formatAccountMessage, parseAccountText, updateTemplateFromObject } from '../utils/parseAccountsData';
 import { updateAccountUseCase } from '../usecases/accounts/updateAccount.usecase';
 import { Account } from '../Interfaces';
 import { seacrhDataAccountsUseCase } from '../usecases/accounts/searchDataAccounts.usecase';
 import { getAccountsWithDateExpitarion } from './accounts.controllers';
+import { getSpecificAccountUseCase } from '../usecases/accounts/getSpecificAccount.usecase';
 
 
 type UserAccountData = {
+	id?:string
+	idUser?: string
+	idCategory?:string
 	email: string;
 	password: string;
 	profile: string;
 	pin: string;
 	expiration: string;
 	clientName: string;
+
 };
 
 type UserSession = {
 	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER' | 'WAITING_ACCOUNT_GARANTY'
-	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT';
+	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT' | 'WAITTING_EMAILTO_UPDATE_ACCOUNT' | 'WAITTING_UPDATE_ACCOUNT';
 	categoryId?: string;
 	accountData?: UserAccountData;
 };
@@ -67,7 +72,7 @@ export const managerBotController = async (app: Express) => {
 	});
 
 	bot.command('proximos_vencer', async (ctx) => {
-		
+
 		await ctx.reply('🔍 Buscando cuentas proximas a vencer');
 
 		const data = await getAccountsWithDateExpitarion()
@@ -78,6 +83,11 @@ export const managerBotController = async (app: Express) => {
 		});
 		await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
 		userSessions[ctx.chat.id] = undefined; // limpiar sesión
+	})
+
+	bot.command('actualizar_cuenta', async (ctx) => {
+		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
+		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
 	})
 
 	bot.on('text', async (ctx): Promise<void> => {
@@ -250,7 +260,7 @@ export const managerBotController = async (app: Express) => {
 			const rawMessage = ctx.message.text;
 			const message = rawMessage.replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
 
-			// 🧩 Extraer el correo de la cuenta anterior
+
 			const oldEmailMatch = message.match(/cuenta[_:\s]+([^\s]+)/i);
 			if (!oldEmailMatch) {
 				await ctx.reply('⚠️ No se pudo detectar el correo anterior. Asegúrate de seguir el formato correcto.');
@@ -258,7 +268,7 @@ export const managerBotController = async (app: Express) => {
 			}
 			const oldEmail = oldEmailMatch[1].trim();
 
-			// 🔍 Buscar la cuenta anterior
+
 			const accountsSnapshot = await db.collection('accounts').where('email_account', '==', oldEmail).get();
 
 			if (accountsSnapshot.empty) {
@@ -269,15 +279,15 @@ export const managerBotController = async (app: Express) => {
 			const accountDoc = accountsSnapshot.docs[0];
 			const accountData = accountDoc.data() as Account;
 
-			// 🧠 Extraer los nuevos datos del mensaje
+
 			const newEmail = message.match(/Correo:\s*([^\s]+)/i)?.[1]?.trim() || accountData.email_account;
 			const newPassword = message.match(/Clave:\s*([^\s]+)/i)?.[1]?.trim() || accountData.pass_account;
 			const newProfile = message.match(/Perfil\s*#?\s*(\S+)/i)?.[1]?.trim() || accountData.name_profile;
 			const newPin = message.match(/pin\s*(\d+)/i)?.[1]?.trim() || accountData.code_profile;
 			const newExpiration = message.match(/Vence:\s*([^\n]+)/i)?.[1]?.trim() || accountData.expiration_date;
 
-			// 🛠️ Actualizar la cuenta en Firestore
-			await updateAccountUseCase({
+
+			await updateAccountUseCase(accountData.id!, {
 				...accountData,
 				email_account: newEmail,
 				pass_account: newPassword,
@@ -305,29 +315,74 @@ export const managerBotController = async (app: Express) => {
 			break;
 		}
 
-		
+		case 'WAITTING_EMAILTO_UPDATE_ACCOUNT': {
+			await ctx.reply('Ingresa por favor el correo de la cuenta a actualizar')
+			const email_account = ctx.message.text
+			const account = await getSpecificAccountUseCase('email_account', email_account)
+
+			if (account.exists) {
+				const accountData = account.data() as Account
+				userSessions[ctx.chat.id] = {step:'WAITTING_UPDATE_ACCOUNT',accountData: {
+					id: accountData.id,
+					idUser: accountData.id_user,
+					idCategory: accountData.id_category,
+					clientName:'',
+					email: accountData.email_account,
+					expiration: accountData.expiration_date,
+					password: accountData.pass_account,
+					pin: accountData.code_profile.toString(),
+					profile: accountData.name_profile
+				}}
+			}
+
+          
+			userSessions[ctx.chat.id] = {step:'WAITTING_EMAILTO_UPDATE_ACCOUNT'}
+
+			break
+
+		}
+
+		case 'WAITTING_UPDATE_ACCOUNT':{
+			await ctx.reply('Envia por favor la informacion de la cuenta a actualizar')
+			const account = session.accountData!
+			const AccountRaw = parseAccountText(ctx.message.text)
+			const newAccount:Account = {
+				id: account.id!,
+				id_user: account.idUser!,
+				id_category: account.idCategory!,
+				code_profile: AccountRaw?.pin ? parseInt(AccountRaw.pin):0,
+				email_account: AccountRaw?.email ?? '',
+				expiration_date: AccountRaw?.rawExpire ?? '',
+				name_profile: AccountRaw?.profile ?? '',
+				pass_account: AccountRaw?.password ?? ''
+
+
+			}
+
+			const responseAccount = await updateAccountUseCase(account.id!, newAccount )
+			const newTemplate = await updateTemplateFromObject(ctx.message.text, responseAccount)
+			await ctx.reply(newTemplate, {parse_mode:'Markdown'})
 
 		}
 
 
 
-		
 
-
-		bot.telegram.setMyCommands([
-			{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
-			{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
-			{ command: 'garantia', description: 'actualizar cuenta  por garantia' },
-			{ command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
-			{ command: 'proximos_vencer', description: 'Proximas cuentas a vencer' },
-			{ command: 'cancelar', description: 'Cancelar el proceso actual' },
-			{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
-		]);
+		}
 		userSessions[ctx.chat.id] = undefined;
 	});
 
 
-
+	bot.telegram.setMyCommands([
+		{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
+		{ command: 'actualizar_cuenta', description: 'Ver todas las cuentas' },
+		{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
+		{ command: 'garantia', description: 'actualizar cuenta  por garantia' },
+		{ command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
+		{ command: 'proximos_vencer', description: 'Proximas cuentas a vencer' },
+		{ command: 'cancelar', description: 'Cancelar el proceso actual' },
+		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
+	]);
 
 
 

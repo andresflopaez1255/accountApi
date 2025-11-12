@@ -1,9 +1,9 @@
 import { db } from '../../firebase';
 
-export const getSpecificAccountUseCase = async (accountId: string) => {
+export const getSpecificAccountUseCase = async (searchQuery:string, queryParams: string) => {
 	const accountDoc = await db
 		.collection('accounts')
-		.where('id', '==', accountId)
+		.where(searchQuery, '==', queryParams)
 		.get();
 
 	if (accountDoc.empty) {

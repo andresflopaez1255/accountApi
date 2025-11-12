@@ -93,7 +93,7 @@ async function updateAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
 	try {
 		const account = req.body;
-		const result = await updateAccountUseCase(account);
+		const result = await updateAccountUseCase(account.id, account);
 
 		res.status(200).json(messageBody(result, MessagesAccounts.updated, true));
 	} catch (error) {
