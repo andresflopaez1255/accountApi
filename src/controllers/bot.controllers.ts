@@ -86,7 +86,7 @@ export const managerBotController = async (app: Express) => {
 	})
 
 	bot.command('actualizar_cuenta', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
+		userSessions[ctx.chat.id] = { step: 'WAITTING_EMAILTO_UPDATE_ACCOUNT' };
 		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
 	})
 
