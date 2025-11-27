@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Telegraf } from 'telegraf';
+import type { Context } from 'telegraf';
 import { v4 as uuid } from 'uuid';
 import type { Express } from 'express';
 
@@ -30,15 +31,64 @@ type UserAccountData = {
 
 };
 
+enum BotStep {
+	WAITING_CATEGORY = 'WAITING_CATEGORY',
+	WAITING_ACCOUNT_DATA = 'WAITING_ACCOUNT_DATA',
+	WAITING_VALIDATE_USER = 'WAITING_VALIDATE_USER',
+	WAITING_NEW_USER = 'WAITING_NEW_USER',
+	WAITING_ACCOUNT_GARANTY = 'WAITING_ACCOUNT_GARANTY',
+	WAITING_EMAIL_GARANTY = 'WAITING_EMAIL_GARANTY',
+	WAITING_SEARCH_ACCOUNT = 'WAITING_SEARCH_ACCOUNT',
+	WAITING_EMAIL_TO_UPDATE_ACCOUNT = 'WAITING_EMAIL_TO_UPDATE_ACCOUNT',
+	WAITING_UPDATE_ACCOUNT = 'WAITING_UPDATE_ACCOUNT',
+}
+
 type UserSession = {
-	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_VALIDATE_USER' | 'WAITING_ACCOUNT_GARANTY'
-	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT' | 'WAITTING_EMAILTO_UPDATE_ACCOUNT' | 'WAITTING_UPDATE_ACCOUNT'| 'WAITTING_NEW_USER';
+	step: BotStep;
 	categoryId?: string;
 	accountData?: UserAccountData;
 };
 
+const ACCOUNT_FORMAT_MESSAGE = [
+	'✉️ Envía los datos con este formato:',
+	'',
+	'correo: ejemplo@correo.com',
+	'contraseña: 123456',
+	'perfil: 2',
+	'pin: 4444',
+	'Vence: 26/12/2025',
+].join('\n');
+
+const replyMarkdown = (ctx: Context, message: string) => ctx.reply(message, { parse_mode: 'Markdown' });
+
+const resetSession = (chatId: number): void => {
+	userSessions[chatId] = undefined;
+};
+
+type AccountTemplatePayload = {
+	email_account: string;
+	pass_account: string;
+	name_profile: string;
+	code_profile: number | string;
+	expiration_date: string;
+};
+
+const replyWithAccountTemplate = async (ctx: Context, account: AccountTemplatePayload): Promise<void> => {
+	await replyMarkdown(
+		ctx,
+		formatAccountMessage({
+			usuario: account.email_account,
+			clave: account.pass_account,
+			perfil: account.name_profile,
+			pin: account.code_profile !== undefined ? String(account.code_profile).trim() : '',
+			vence: account.expiration_date,
+		})
+	);
+};
+
 const userSessions: Record<number, UserSession | undefined> = {};
-export const managerBotController = async (app: Express) => {
+export const managerBotController = async (_app: Express) => {
+	void _app;
 	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
 	/* const webhookPath = `/bot${bot.secretPathComponent()}`;
 	app.use(bot.webhookCallback(webhookPath));
@@ -52,23 +102,23 @@ export const managerBotController = async (app: Express) => {
 
 	// Comando para iniciar creación
 	bot.command('crear_cuenta', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITING_CATEGORY' };
-		ctx.reply('📂 Ingresa la *categoría* de la cuenta:', { parse_mode: 'Markdown' });
+		userSessions[ctx.chat.id] = { step: BotStep.WAITING_CATEGORY };
+		await replyMarkdown(ctx, '📂 Ingresa la *categoría* de la cuenta:');
 	});
 
 	bot.command('garantia', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITING_ACCOUNT_GARANTY' };
+		userSessions[ctx.chat.id] = { step: BotStep.WAITING_ACCOUNT_GARANTY };
 		await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía o actualizar los datos:');
 	});
 
 	bot.command('cancelar', async (ctx) => {
-		userSessions[ctx.chat.id] = undefined;
+		resetSession(ctx.chat.id);
 		await ctx.reply('❌ Proceso cancelado. Puedes iniciar un nuevo proceso cuando desees.');
 	});
 
 
 	bot.command('buscar_cuentas', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITTING_SEARCH_ACCOUNT' };
+		userSessions[ctx.chat.id] = { step: BotStep.WAITING_SEARCH_ACCOUNT };
 		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
 	});
 
@@ -83,11 +133,11 @@ export const managerBotController = async (app: Express) => {
 			responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
 		});
 		await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
-		userSessions[ctx.chat.id] = undefined; // limpiar sesión
+		resetSession(ctx.chat.id); // limpiar sesión
 	})
 
 	bot.command('actualizar_cuenta', async (ctx) => {
-		userSessions[ctx.chat.id] = { step: 'WAITTING_EMAILTO_UPDATE_ACCOUNT' };
+		userSessions[ctx.chat.id] = { step: BotStep.WAITING_EMAIL_TO_UPDATE_ACCOUNT };
 		await ctx.reply('Ingresa por favor el correo de la cuenta a actualizar')
 	})
 
@@ -98,13 +148,13 @@ export const managerBotController = async (app: Express) => {
 		console.log(session)
 		switch (session.step) {
 
-		case 'WAITING_EMAIL_GARANTY': {
-			session.step = 'WAITING_ACCOUNT_GARANTY';
+		case BotStep.WAITING_EMAIL_GARANTY: {
+			session.step = BotStep.WAITING_ACCOUNT_GARANTY;
 			await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía por 30 días adicionales:');
 			break;
 		}
 
-		case 'WAITTING_SEARCH_ACCOUNT': {
+		case BotStep.WAITING_SEARCH_ACCOUNT: {
 			const searchQuery = ctx.message.text.trim();
 			const results = (await seacrhDataAccountsUseCase(searchQuery)) as Account[];
 
@@ -116,17 +166,14 @@ export const managerBotController = async (app: Express) => {
 			let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
 
 			if (results.length == 1) {
-				const plantilla = formatAccountMessage(
-					{
-						usuario: results[0].email_account,
-						clave: results[0].pass_account,
-						perfil: results[0].name_profile,
-						pin: results[0].code_profile,
-						vence: results[0].expiration_date,
-					}
-				);
-				await ctx.reply(plantilla, { parse_mode: 'Markdown' });
-				userSessions[ctx.chat.id] = undefined; // limpiar sesión
+				await replyWithAccountTemplate(ctx, {
+					email_account: results[0].email_account,
+					pass_account: results[0].pass_account,
+					name_profile: results[0].name_profile,
+					code_profile: results[0].code_profile,
+					expiration_date: results[0].expiration_date,
+				});
+				resetSession(ctx.chat.id); // limpiar sesión
 				return;
 			}
 			results.forEach((account, index) => {
@@ -135,12 +182,12 @@ export const managerBotController = async (app: Express) => {
 			});
 
 			await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
-			userSessions[ctx.chat.id] = undefined; // limpiar sesión
+			resetSession(ctx.chat.id); // limpiar sesión
 			break;
 
 		}
 
-		case 'WAITING_CATEGORY': {
+		case BotStep.WAITING_CATEGORY: {
 			const category = capitalize(ctx.message.text.trim());
 			console.log(category)
 			const categoryData = await getCategoryUseCase('category_name', category);
@@ -152,30 +199,19 @@ export const managerBotController = async (app: Express) => {
 			}
 
 			session.categoryId = categoryData.id;
-			session.step = 'WAITING_ACCOUNT_DATA';
+			session.step = BotStep.WAITING_ACCOUNT_DATA;
 
-			await ctx.reply(
-				'✉️ Envía los datos con este formato:\n\n' +
-					'correo: ejemplo@correo.com\n' +
-					'contraseña: 123456\n' +
-					'perfil: 2\n' +
-					'pin: 4444\n' +
-					'Vence: 26/12/2025',
-				{ parse_mode: 'Markdown' }
-			);
+			await replyMarkdown(ctx, ACCOUNT_FORMAT_MESSAGE);
 			break;
 		}
 
-		case 'WAITING_ACCOUNT_DATA': {
+		case BotStep.WAITING_ACCOUNT_DATA: {
 			const regex =
 					/correo:\s*(\S+)\s+contraseña:\s*(\S+)\s+perfil:\s*(\S+)\s+pin:\s*(\d+)\s+Vence:\s*(.*)/i;
 			const match = ctx.message.text.trim().match(regex);
 
 			if (!match) {
-				await ctx.reply(
-					'⚠ Formato no reconocido. Asegúrate de enviar algo como:\n' +
-						'correo: ejemplo@correo.com\ncontraseña: 123456\nperfil: 2\npin: 4444\nVence: 26/12/2025'
-				);
+				await ctx.reply(`⚠ Formato no reconocido. Asegúrate de enviar algo como:\n\n${ACCOUNT_FORMAT_MESSAGE}`);
 				return;
 			}
 
@@ -189,7 +225,7 @@ export const managerBotController = async (app: Express) => {
 				expiration,
 				clientName: '',
 			};
-			session.step = 'WAITING_VALIDATE_USER';
+			session.step = BotStep.WAITING_VALIDATE_USER;
 
 			await ctx.reply(
 				'👤 Ahora dime el nombre del cliente al que pertenece la cuenta:'
@@ -197,10 +233,10 @@ export const managerBotController = async (app: Express) => {
 			break;
 		}
 
-		case 'WAITING_VALIDATE_USER': {
+		case BotStep.WAITING_VALIDATE_USER: {
 			const account = session.accountData;
 			if (!account) {
-				userSessions[ctx.chat.id] = undefined;
+				resetSession(ctx.chat.id);
 				await ctx.reply(
 					'❌ Hubo un problema con los datos previos. Reinicia con /crear_cuenta.'
 				);
@@ -218,7 +254,7 @@ export const managerBotController = async (app: Express) => {
 			const userData = await useCaseSpecificDataUser('name_user', clientName);
 
 			if (userData.empty) {
-				session.step = 'WAITTING_NEW_USER';
+				session.step = BotStep.WAITING_NEW_USER;
 				await ctx.reply(
 					`👤 No encuentro a "${clientName}".\n` +
 						'Por favor envía su teléfono y correo así:\n\n' +
@@ -228,7 +264,6 @@ export const managerBotController = async (app: Express) => {
 			}
 
 			const newAccount = await createNewAccountUseCase({
-				id: uuid(),
 				email_account: account.email,
 				pass_account: account.password,
 				name_profile: account.profile,
@@ -238,49 +273,45 @@ export const managerBotController = async (app: Express) => {
 				id_category: session.categoryId!,
 			});
 
-			await ctx.reply(
+			await replyMarkdown(
+				ctx,
 				`✅ Cuenta para *${clientName}* registrada con éxito.`,
-				{ parse_mode: 'Markdown' }
 			);
-			userSessions[ctx.chat.id] = undefined;
+			resetSession(ctx.chat.id);
 
-			const plantilla = formatAccountMessage({
-				usuario: newAccount.email_account,
-				clave: newAccount.pass_account,
-				perfil: newAccount.name_profile,
-				pin: newAccount.code_profile,
-				vence: newAccount.expiration_date,
-			});
-
-			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
+			await replyWithAccountTemplate(ctx, newAccount);
 			break;
 		}
 
-		case 'WAITTING_NEW_USER': {
-			const parts = ctx.message.text.split(/\s+/);
-			const phone = parts[0];
-
-
+		case BotStep.WAITING_NEW_USER: {
 			const account = session.accountData;
 			if (!account) {
-				// If account data is missing, inform user and reset session
-				userSessions[ctx.chat.id] = undefined;
+				resetSession(ctx.chat.id);
 				await ctx.reply('❌ Datos de la cuenta faltan. Por favor reinicia el proceso con /crear_cuenta.');
 				return;
 			}
 
+			const phoneMatch = ctx.message.text.match(/(\+?\d[\d\s-]{6,}\d)/);
+			const emailMatch = ctx.message.text.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+
+			if (!phoneMatch || !emailMatch) {
+				await ctx.reply('⚠ Formato inválido. Envía el teléfono y correo así: 📞 3001234567 📧 cliente@ejemplo.com');
+				return;
+			}
+
+			const phone = phoneMatch[1].replace(/\s|-/g, '');
+			const email = emailMatch[0];
 			const { clientName } = account;
 			const userID = uuid();
 			const newUser = {
 				id: userID,
 				name_user: clientName,
 				cellphone_user: phone,
-				email_user: null,
+				email_user: email,
 			};
 
 			await db.collection('users').add(newUser);
 			const newAccount = await createNewAccountUseCase({
-				id: uuid(),
 				email_account: account.email,
 				pass_account: account.password,
 				name_profile: account.profile,
@@ -290,24 +321,16 @@ export const managerBotController = async (app: Express) => {
 				id_category: session.categoryId!,
 			});
 
-			await ctx.reply(
+			await replyMarkdown(
+				ctx,
 				`✅ Cuenta para *${clientName}* registrada con éxito.`,
-				{ parse_mode: 'Markdown' }
 			);
-			userSessions[ctx.chat.id] = undefined;
+			resetSession(ctx.chat.id);
 
-			const plantilla = formatAccountMessage({
-				usuario: newAccount.email_account,
-				clave: newAccount.pass_account,
-				perfil: newAccount.name_profile,
-				pin: newAccount.code_profile,
-				vence: newAccount.expiration_date,
-			});
-
-			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
+			await replyWithAccountTemplate(ctx, newAccount);
 			break;
 		}
-		case 'WAITING_ACCOUNT_GARANTY': {
+		case BotStep.WAITING_ACCOUNT_GARANTY: {
 			const rawMessage = ctx.message.text;
 			const message = rawMessage.replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -348,27 +371,28 @@ export const managerBotController = async (app: Express) => {
 			});
 
 
-			const plantilla = formatAccountMessage(
-				{
-					usuario: newEmail,
-					clave: newPassword,
-					perfil: newProfile,
-					pin: newPin,
-					vence: newExpiration,
-				}
-			);
-
 			console.log(newEmail)
 			await ctx.reply(`✅ La cuenta *${newEmail}* ha sido actualizada exitosamente.`, { parse_mode: 'Markdown' });
 
-			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
-			userSessions[ctx.chat.id] = undefined;
+			await replyWithAccountTemplate(ctx, {
+				email_account: newEmail,
+				pass_account: newPassword,
+				name_profile: newProfile,
+				code_profile: newPin,
+				expiration_date: newExpiration,
+			});
+			resetSession(ctx.chat.id);
 			break;
 		}
 
-		case 'WAITTING_UPDATE_ACCOUNT': {
+		case BotStep.WAITING_UPDATE_ACCOUNT: {
+			const account = session.accountData;
+			if (!account) {
+				resetSession(ctx.chat.id);
+				await ctx.reply('❌ No se encontró la cuenta a actualizar. Repite /actualizar_cuenta.');
+				return;
+			}
 
-			const account = session.accountData!
 			const AccountRaw = parseAccountText(ctx.message.text)
 			const newAccount: Account = {
 				id: account.id!,
@@ -392,7 +416,7 @@ export const managerBotController = async (app: Express) => {
 		}
 
 
-		case 'WAITTING_EMAILTO_UPDATE_ACCOUNT': {
+		case BotStep.WAITING_EMAIL_TO_UPDATE_ACCOUNT: {
 			const email_account = ctx.message?.text?.trim();
 			if (!email_account) return;
 
@@ -418,7 +442,7 @@ export const managerBotController = async (app: Express) => {
 			}
 
 
-			session.step = 'WAITTING_UPDATE_ACCOUNT'
+			session.step = BotStep.WAITING_UPDATE_ACCOUNT
 
 			await ctx.reply('✏️ Ahora envía la información de la cuenta a actualizar siguiendo el formato habitual.')
 
