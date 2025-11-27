@@ -447,7 +447,7 @@ export const managerBotController = async (app: Express) => {
 		{ command: 'cancelar', description: 'Cancelar el proceso actual' },
 		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
 	]);
-	bot.launch()
+	
 
 
 
