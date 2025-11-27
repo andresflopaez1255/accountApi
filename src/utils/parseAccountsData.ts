@@ -114,7 +114,7 @@ function updateTemplateFromObject(template:string, data:Account) {
 
 	// Fecha de vencimiento
 	if (data.expiration_date) {
-		updated = updated.replace(/(Vence\s*[:\-]?\s*)([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i, `$1${data.expiration_date}`);
+		updated = updated.replace(/(Vence\s*[:\-]?\s*)([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i, `Vence ${data.expiration_date}`);
 	}
 
 	return updated;

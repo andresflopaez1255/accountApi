@@ -17,9 +17,10 @@ import { getSpecificAccountUseCase } from '../usecases/accounts/getSpecificAccou
 
 
 type UserAccountData = {
-	id?:string
+	idDoc?: string
+	id?: string
 	idUser?: string
-	idCategory?:string
+	idCategory?: string
 	email: string;
 	password: string;
 	profile: string;
@@ -30,8 +31,8 @@ type UserAccountData = {
 };
 
 type UserSession = {
-	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_NEW_USER' | 'WAITING_ACCOUNT_GARANTY'
-	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT' | 'WAITTING_EMAILTO_UPDATE_ACCOUNT' | 'WAITTING_UPDATE_ACCOUNT';
+	step: 'WAITING_CATEGORY' | 'WAITING_ACCOUNT_DATA' | 'WAITING_VALIDATE_USER' | 'WAITING_ACCOUNT_GARANTY'
+	| 'WAITING_EMAIL_GARANTY' | 'WAITTING_SEARCH_ACCOUNT' | 'WAITTING_EMAILTO_UPDATE_ACCOUNT' | 'WAITTING_UPDATE_ACCOUNT'| 'WAITTING_NEW_USER';
 	categoryId?: string;
 	accountData?: UserAccountData;
 };
@@ -39,7 +40,7 @@ type UserSession = {
 const userSessions: Record<number, UserSession | undefined> = {};
 export const managerBotController = async (app: Express) => {
 	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
-	const webhookPath = `/bot${bot.secretPathComponent()}`;
+	/* const webhookPath = `/bot${bot.secretPathComponent()}`;
 	app.use(bot.webhookCallback(webhookPath));
 
 	const webhookUrl = `https://accountapi-8smd.onrender.com${webhookPath}`;
@@ -47,7 +48,7 @@ export const managerBotController = async (app: Express) => {
 
 	console.log(`🤖 Webhook configurado en ${webhookUrl}`);
 
-
+ */
 
 	// Comando para iniciar creación
 	bot.command('crear_cuenta', async (ctx) => {
@@ -87,14 +88,14 @@ export const managerBotController = async (app: Express) => {
 
 	bot.command('actualizar_cuenta', async (ctx) => {
 		userSessions[ctx.chat.id] = { step: 'WAITTING_EMAILTO_UPDATE_ACCOUNT' };
-		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
+		await ctx.reply('Ingresa por favor el correo de la cuenta a actualizar')
 	})
 
 	bot.on('text', async (ctx): Promise<void> => {
 		const session = userSessions[ctx.chat.id];
 
 		if (!session) return; // si no está en flujo, ignorar
-
+		console.log(session)
 		switch (session.step) {
 
 		case 'WAITING_EMAIL_GARANTY': {
@@ -153,58 +154,109 @@ export const managerBotController = async (app: Express) => {
 			session.categoryId = categoryData.id;
 			session.step = 'WAITING_ACCOUNT_DATA';
 
-			await ctx.reply('✉️ Envía los datos de la cuenta con este formato:\n\n`correo contraseña perfil pin XXXX Válido hasta DD/MM/YYYY hh:mm am/pm -05\nCliente : Nombre`', { parse_mode: 'Markdown' });
+			await ctx.reply(
+				'✉️ Envía los datos con este formato:\n\n' +
+					'correo: ejemplo@correo.com\n' +
+					'contraseña: 123456\n' +
+					'perfil: 2\n' +
+					'pin: 4444\n' +
+					'Vence: 26/12/2025',
+				{ parse_mode: 'Markdown' }
+			);
 			break;
 		}
 
 		case 'WAITING_ACCOUNT_DATA': {
-			const regex = /(.*?)\s+(\S+)\s+(\d+)\s+pin\s+(\d+)\s+Válido hasta\s+(.*?)\s*Cliente\s*:\s*(.*)/i;
-			const match = ctx.message.text.match(regex);
+			const regex =
+					/correo:\s*(\S+)\s+contraseña:\s*(\S+)\s+perfil:\s*(\S+)\s+pin:\s*(\d+)\s+Vence:\s*(.*)/i;
+			const match = ctx.message.text.trim().match(regex);
 
 			if (!match) {
-				await ctx.reply('⚠ Formato no reconocido. Por favor sigue el ejemplo correctamente.');
+				await ctx.reply(
+					'⚠ Formato no reconocido. Asegúrate de enviar algo como:\n' +
+						'correo: ejemplo@correo.com\ncontraseña: 123456\nperfil: 2\npin: 4444\nVence: 26/12/2025'
+				);
 				return;
 			}
 
-			const [_, email, password, profile, pin, expiration, clientName] = match;
+			const [, email, password, profile, pin, expiration] = match;
 
-			const userData = await useCaseSpecificDataUser('name_user', clientName.trim());
-			session.accountData = { email, password, profile, pin, expiration, clientName };
+			session.accountData = {
+				email,
+				password,
+				profile,
+				pin,
+				expiration,
+				clientName: '',
+			};
+			session.step = 'WAITING_VALIDATE_USER';
+
+			await ctx.reply(
+				'👤 Ahora dime el nombre del cliente al que pertenece la cuenta:'
+			);
+			break;
+		}
+
+		case 'WAITING_VALIDATE_USER': {
+			const account = session.accountData;
+			if (!account) {
+				userSessions[ctx.chat.id] = undefined;
+				await ctx.reply(
+					'❌ Hubo un problema con los datos previos. Reinicia con /crear_cuenta.'
+				);
+				return;
+			}
+
+			const clientName = ctx.message.text.trim();
+			if (!clientName) {
+				await ctx.reply('⚠ Necesito el nombre del cliente. Intenta de nuevo:');
+				return;
+			}
+
+			session.accountData = { ...account, clientName };
+
+			const userData = await useCaseSpecificDataUser('name_user', clientName);
 
 			if (userData.empty) {
-				session.step = 'WAITING_NEW_USER';
-				await ctx.reply(`👤 El cliente "${clientName}" no existe.\nPor favor envíame su teléfono y correo con este formato:\n\n📞 3001234567 📧 cliente@ejemplo.com`);
+				session.step = 'WAITTING_NEW_USER';
+				await ctx.reply(
+					`👤 No encuentro a "${clientName}".\n` +
+						'Por favor envía su teléfono y correo así:\n\n' +
+						'📞 3001234567 📧 cliente@ejemplo.com'
+				);
 				return;
 			}
 
-			// si existe, crea cuenta directamente
 			const newAccount = await createNewAccountUseCase({
-				email_account: email,
-				pass_account: password,
-				name_profile: profile,
-				code_profile: parseInt(pin, 10),
-				expiration_date: expiration,
+				id: uuid(),
+				email_account: account.email,
+				pass_account: account.password,
+				name_profile: account.profile,
+				code_profile: parseInt(account.pin, 10),
+				expiration_date: account.expiration,
 				id_user: userData.docs[0].data().id,
 				id_category: session.categoryId!,
 			});
 
-
-			await ctx.reply(`✅ Cuenta para *${clientName}* creada con éxito.`, { parse_mode: 'Markdown' });
-			userSessions[ctx.chat.id] = undefined;
-			const plantilla = formatAccountMessage(
-				{
-					usuario: newAccount.email_account,
-					clave: newAccount.pass_account,
-					perfil: newAccount.name_profile,
-					pin: newAccount.code_profile,
-					vence: newAccount.expiration_date,
-				}
+			await ctx.reply(
+				`✅ Cuenta para *${clientName}* registrada con éxito.`,
+				{ parse_mode: 'Markdown' }
 			);
+			userSessions[ctx.chat.id] = undefined;
+
+			const plantilla = formatAccountMessage({
+				usuario: newAccount.email_account,
+				clave: newAccount.pass_account,
+				perfil: newAccount.name_profile,
+				pin: newAccount.code_profile,
+				vence: newAccount.expiration_date,
+			});
+
 			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
 			break;
 		}
 
-		case 'WAITING_NEW_USER': {
+		case 'WAITTING_NEW_USER': {
 			const parts = ctx.message.text.split(/\s+/);
 			const phone = parts[0];
 
@@ -218,44 +270,43 @@ export const managerBotController = async (app: Express) => {
 			}
 
 			const { clientName } = account;
-
+			const userID = uuid();
 			const newUser = {
-				id: uuid(),
+				id: userID,
 				name_user: clientName,
 				cellphone_user: phone,
 				email_user: null,
 			};
 
 			await db.collection('users').add(newUser);
-
-			await createNewAccountUseCase({
+			const newAccount = await createNewAccountUseCase({
+				id: uuid(),
 				email_account: account.email,
 				pass_account: account.password,
 				name_profile: account.profile,
 				code_profile: parseInt(account.pin, 10),
 				expiration_date: account.expiration,
-				id_user: newUser.id,
+				id_user: userID,
 				id_category: session.categoryId!,
 			});
 
-			await ctx.reply(`✅ Usuario *${clientName}* y su cuenta fueron creados correctamente.`, { parse_mode: 'Markdown' });
-			// Limpia la sesión del usuario
-			userSessions[ctx.chat.id] = undefined;
-			const plantilla = formatAccountMessage(
-				{
-					usuario: account.email,
-					clave: account.password,
-					perfil: account.profile,
-					pin: account.pin,
-					vence: account.expiration,
-				}
+			await ctx.reply(
+				`✅ Cuenta para *${clientName}* registrada con éxito.`,
+				{ parse_mode: 'Markdown' }
 			);
+			userSessions[ctx.chat.id] = undefined;
+
+			const plantilla = formatAccountMessage({
+				usuario: newAccount.email_account,
+				clave: newAccount.pass_account,
+				perfil: newAccount.name_profile,
+				pin: newAccount.code_profile,
+				vence: newAccount.expiration_date,
+			});
+
 			await ctx.reply(plantilla, { parse_mode: 'Markdown' });
-
-
 			break;
 		}
-
 		case 'WAITING_ACCOUNT_GARANTY': {
 			const rawMessage = ctx.message.text;
 			const message = rawMessage.replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
@@ -315,42 +366,15 @@ export const managerBotController = async (app: Express) => {
 			break;
 		}
 
-		case 'WAITTING_EMAILTO_UPDATE_ACCOUNT': {
-			await ctx.reply('Ingresa por favor el correo de la cuenta a actualizar')
-			const email_account = ctx.message.text
-			const account = await getSpecificAccountUseCase('email_account', email_account)
+		case 'WAITTING_UPDATE_ACCOUNT': {
 
-			if (account.exists) {
-				const accountData = account.data() as Account
-				userSessions[ctx.chat.id] = {step:'WAITTING_UPDATE_ACCOUNT',accountData: {
-					id: accountData.id,
-					idUser: accountData.id_user,
-					idCategory: accountData.id_category,
-					clientName:'',
-					email: accountData.email_account,
-					expiration: accountData.expiration_date,
-					password: accountData.pass_account,
-					pin: accountData.code_profile.toString(),
-					profile: accountData.name_profile
-				}}
-			}
-
-          
-			userSessions[ctx.chat.id] = {step:'WAITTING_EMAILTO_UPDATE_ACCOUNT'}
-
-			break
-
-		}
-
-		case 'WAITTING_UPDATE_ACCOUNT':{
-			await ctx.reply('Envia por favor la informacion de la cuenta a actualizar')
 			const account = session.accountData!
 			const AccountRaw = parseAccountText(ctx.message.text)
-			const newAccount:Account = {
+			const newAccount: Account = {
 				id: account.id!,
 				id_user: account.idUser!,
 				id_category: account.idCategory!,
-				code_profile: AccountRaw?.pin ? parseInt(AccountRaw.pin):0,
+				code_profile: AccountRaw?.pin ? parseInt(AccountRaw.pin) : 0,
 				email_account: AccountRaw?.email ?? '',
 				expiration_date: AccountRaw?.rawExpire ?? '',
 				name_profile: AccountRaw?.profile ?? '',
@@ -359,31 +383,71 @@ export const managerBotController = async (app: Express) => {
 
 			}
 
-			const responseAccount = await updateAccountUseCase(account.id!, newAccount )
+
+
+			const responseAccount = await updateAccountUseCase(account.idDoc!, newAccount)
 			const newTemplate = await updateTemplateFromObject(ctx.message.text, responseAccount)
-			await ctx.reply(newTemplate, {parse_mode:'Markdown'})
+			await ctx.reply(newTemplate, { parse_mode: 'Markdown' })
+			break;
+		}
+
+
+		case 'WAITTING_EMAILTO_UPDATE_ACCOUNT': {
+			const email_account = ctx.message?.text?.trim();
+			if (!email_account) return;
+
+			const account = await getSpecificAccountUseCase('email_account', email_account);
+			if (!account.exists) {
+				await ctx.reply(`❌ No se encontró ninguna cuenta con el correo ${email_account}`);
+				return;
+			}
+
+			const accountData = account.data() as Account;
+
+			session.accountData = {
+				idDoc: account.id,
+				id: accountData.id,
+				idUser: accountData.id_user,
+				idCategory: accountData.id_category,
+				clientName: '',
+				email: accountData.email_account,
+				expiration: accountData.expiration_date,
+				password: accountData.pass_account,
+				pin: accountData.code_profile.toString(),
+				profile: accountData.name_profile
+			}
+
+
+			session.step = 'WAITTING_UPDATE_ACCOUNT'
+
+			await ctx.reply('✏️ Ahora envía la información de la cuenta a actualizar siguiendo el formato habitual.')
+
+			break;
+
+
+
+
+
+
 
 		}
 
 
 
-
 		}
-		bot.telegram.setMyCommands([
-			{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
-			{ command: 'actualizar_cuenta', description: 'Ver todas las cuentas' },
-			{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
-			{ command: 'garantia', description: 'actualizar cuenta  por garantia' },
-			{ command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
-			{ command: 'proximos_vencer', description: 'Proximas cuentas a vencer' },
-			{ command: 'cancelar', description: 'Cancelar el proceso actual' },
-			{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
-		]);
-		userSessions[ctx.chat.id] = undefined;
 	});
 
-
-	
+	bot.telegram.setMyCommands([
+		{ command: 'crear_cuenta', description: 'Crear una nueva cuenta' },
+		{ command: 'actualizar_cuenta', description: 'Ver todas las cuentas' },
+		{ command: 'listar_cuentas', description: 'Ver todas las cuentas' },
+		{ command: 'garantia', description: 'actualizar cuenta  por garantia' },
+		{ command: 'buscar_cuentas', description: 'Buscar cuentas por correo o cliente' },
+		{ command: 'proximos_vencer', description: 'Proximas cuentas a vencer' },
+		{ command: 'cancelar', description: 'Cancelar el proceso actual' },
+		{ command: 'ayuda', description: 'Mostrar los comandos disponibles' },
+	]);
+	bot.launch()
 
 
 
