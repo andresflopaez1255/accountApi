@@ -8,15 +8,15 @@ import { BOT_COMMANDS } from './bot.constants';
 export const managerBotController = async (_app: Express) => {
 	void _app;
 	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
-	/* const webhookPath = `/bot${bot.secretPathComponent()}`;
-	app.use(bot.webhookCallback(webhookPath));
+	const webhookPath = `/bot${bot.secretPathComponent()}`;
+	_app.use(bot.webhookCallback(webhookPath));
 
 	const webhookUrl = `https://accountapi-8smd.onrender.com${webhookPath}`;
 	bot.telegram.setWebhook(webhookUrl);
 
 	console.log(`🤖 Webhook configurado en ${webhookUrl}`);
 
- */
+
 
 	// Registrar todos los comandos
 	registerCommands(bot);
