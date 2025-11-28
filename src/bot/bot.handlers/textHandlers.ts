@@ -11,10 +11,10 @@ import { updateAccountUseCase } from '../../usecases/accounts/updateAccount.usec
 import { seacrhDataAccountsUseCase } from '../../usecases/accounts/searchDataAccounts.usecase';
 import { getSpecificAccountUseCase } from '../../usecases/accounts/getSpecificAccount.usecase';
 import { Account } from '../../Interfaces';
-import { BotStep, type UserSession } from '../../bot/bot.types';
-import { resetSession, setSession } from '../../bot/bot.session';
-import { ACCOUNT_FORMAT_MESSAGE } from '../../bot/bot.constants';
-import { replyMarkdown, replyWithAccountTemplate } from '../../bot/bot.utils';
+import { BotStep, type UserSession } from '../bot.types';
+import { resetSession, setSession } from '../bot.session';
+import { ACCOUNT_FORMAT_MESSAGE } from '../bot.constants';
+import { replyMarkdown, replyWithAccountTemplate } from '../bot.utils';
 
 export const handleTextMessage = async (ctx: Context, session: UserSession): Promise<void> => {
 	if (!ctx.chat || !ctx.message || !('text' in ctx.message)) return;

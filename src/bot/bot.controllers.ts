@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf';
 import type { Express } from 'express';
-import { registerCommands } from '../controllers/bot.handlers/commands';
-import { handleTextMessage } from '../controllers/bot.handlers/textHandlers';
+import { registerCommands } from './bot.handlers/commands';
+import { handleTextMessage } from './bot.handlers/textHandlers';
 import { getSession } from './bot.session';
 import { BOT_COMMANDS } from './bot.constants';
 

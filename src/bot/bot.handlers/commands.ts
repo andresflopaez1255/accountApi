@@ -1,9 +1,8 @@
 import type { Telegraf } from 'telegraf';
-import type { Context } from 'telegraf';
-import { BotStep } from '../../bot/bot.types';
-import { resetSession, setSession } from '../../bot/bot.session';
-import { replyMarkdown } from '../../bot/bot.utils';
-import { getAccountsWithDateExpitarion } from '../accounts.controllers';
+import { BotStep } from '../bot.types';
+import { resetSession, setSession } from '../bot.session';
+import { replyMarkdown } from '../bot.utils';
+import { getAccountsWithDateExpitarion } from '../../controllers/accounts.controllers';
 
 export const registerCommands = (bot: Telegraf): void => {
 	// Comando para iniciar creación
