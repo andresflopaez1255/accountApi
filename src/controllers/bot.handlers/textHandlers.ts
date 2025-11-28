@@ -17,6 +17,8 @@ import { ACCOUNT_FORMAT_MESSAGE } from '../../bot/bot.constants';
 import { replyMarkdown, replyWithAccountTemplate } from '../../bot/bot.utils';
 
 export const handleTextMessage = async (ctx: Context, session: UserSession): Promise<void> => {
+	if (!ctx.chat || !ctx.message || !('text' in ctx.message)) return;
+	
 	console.log(session)
 	switch (session.step) {
 
