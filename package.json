@@ -18,7 +18,10 @@
     "clean": "(rm -r ./dist || true)",
     "dev": " nodemon --exec ts-node src/index.ts --watch src",
     "lint": "eslint --ext .ts --fix src/**/*.ts test/**/*.ts",
-    "swagger": "tsoa spec"
+    "swagger": "tsoa spec",
+    "test": "mocha --require source-map-support/register --require ts-node/register --extension ts --recursive test/**/*.test.ts",
+    "test:watch": "mocha --require source-map-support/register --require ts-node/register --extension ts --recursive --watch test/**/*.test.ts",
+    "test:coverage": "nyc mocha --require source-map-support/register --require ts-node/register --extension ts --recursive test/**/*.test.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
