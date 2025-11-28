@@ -12,7 +12,7 @@ import { getAccountsWithDateExpitarion } from './controllers/accounts.controller
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
 import { specs } from './swagger';
-import { managerBotController } from './controllers/bot.controllers';
+import { managerBotController } from './bot/bot.controllers';
 
 const app: Express = express();
 
