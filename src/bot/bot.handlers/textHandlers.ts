@@ -1,299 +1,257 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import type { Context } from 'telegraf';
 import { v4 as uuid } from 'uuid';
+import { Account } from '../../Interfaces';
 import { db } from '../../firebase';
+import { getCategoryUseCase } from '../../usecases/categories/getCategory.usecase';
+import { createNewAccountUseCase } from '../../usecases/accounts/createNewAccount.usecase';
+import { getSpecificAccountUseCase } from '../../usecases/accounts/getSpecificAccount.usecase';
+import { seacrhDataAccountsUseCase } from '../../usecases/accounts/searchDataAccounts.usecase';
+import { updateAccountUseCase } from '../../usecases/accounts/updateAccount.usecase';
+import { useCaseSpecificDataUser } from '../../usecases/users/specificDataUser.usecase';
 import { capitalize } from '../../utils/capitalizeString';
 import { parseAccountText, updateTemplateFromObject } from '../../utils/parseAccountsData';
-import { getCategoryUseCase } from '../../usecases/categories/getCategory.usecase';
-import { useCaseSpecificDataUser } from '../../usecases/users/specificDataUser.usecase';
-import { createNewAccountUseCase } from '../../usecases/accounts/createNewAccount.usecase';
-import { updateAccountUseCase } from '../../usecases/accounts/updateAccount.usecase';
-import { seacrhDataAccountsUseCase } from '../../usecases/accounts/searchDataAccounts.usecase';
-import { getSpecificAccountUseCase } from '../../usecases/accounts/getSpecificAccount.usecase';
-import { Account } from '../../Interfaces';
-import { BotStep, type UserSession } from '../bot.types';
+import { ACCOUNT_FORMAT_MESSAGE, BOT_MESSAGES } from '../bot.constants';
 import { resetSession, setSession } from '../bot.session';
-import { ACCOUNT_FORMAT_MESSAGE } from '../bot.constants';
-import { replyMarkdown, replyWithAccountTemplate } from '../bot.utils';
+import { BotStep, UserSession } from '../bot.types';
+import {
+	formatAccountsListMessage,
+	parseContactData,
+	replyMarkdown,
+	replyWithAccountTemplate,
+} from '../bot.utils';
 
-export const handleTextMessage = async (ctx: Context, session: UserSession): Promise<void> => {
-	if (!ctx.chat || !ctx.message || !('text' in ctx.message)) return;
-	
-	console.log(session)
-	switch (session.step) {
+type BotTextHandler = (ctx: Context, session: UserSession, text: string) => Promise<void>;
 
-	case BotStep.WAITING_EMAIL_GARANTY: {
-		session.step = BotStep.WAITING_ACCOUNT_GARANTY;
-		setSession(ctx.chat.id, session);
-		await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía por 30 días adicionales:');
-		break;
+const saveSessionStep = (chatId: number, session: UserSession, step: BotStep): void => {
+	session.step = step;
+	setSession(chatId, session);
+};
+
+const createAccountFromSession = (
+	session: UserSession,
+	userId: string,
+	overrides?: Partial<Account>
+): Account => {
+	const account = session.accountData!;
+
+	return {
+		email_account: account.email,
+		pass_account: account.password,
+		name_profile: account.profile,
+		code_profile: parseInt(account.pin, 10),
+		expiration_date: account.expiration,
+		id_user: userId,
+		id_category: session.categoryId!,
+		...overrides,
+	};
+};
+
+const handleWaitingEmailGaranty: BotTextHandler = async (ctx, session) => {
+	saveSessionStep(ctx.chat!.id, session, BotStep.WAITING_ACCOUNT_GARANTY);
+	await replyMarkdown(ctx, BOT_MESSAGES.warrantyExtensionPrompt);
+};
+
+const handleWaitingSearchAccount: BotTextHandler = async (ctx, _session, text) => {
+	const results = (await seacrhDataAccountsUseCase(text.trim())) as Account[];
+
+	if (results.length === 0) {
+		await replyMarkdown(ctx, BOT_MESSAGES.searchNoResults);
+		return;
 	}
 
-	case BotStep.WAITING_SEARCH_ACCOUNT: {
-		const searchQuery = ctx.message.text.trim();
-		const results = (await seacrhDataAccountsUseCase(searchQuery)) as Account[];
-
-		if (results.length === 0) {
-			await ctx.reply('❌ No se encontraron cuentas que coincidan con la búsqueda. Intenta nuevamente.');
-			return;
-		}
-
-		let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
-
-		if (results.length == 1) {
-			await replyWithAccountTemplate(ctx, {
-				email_account: results[0].email_account,
-				pass_account: results[0].pass_account,
-				name_profile: results[0].name_profile,
-				code_profile: results[0].code_profile,
-				expiration_date: results[0].expiration_date,
-			});
-			resetSession(ctx.chat.id); // limpiar sesión
-			return;
-		}
-		results.forEach((account, index) => {
-			responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
-		});
-
-		await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
-		resetSession(ctx.chat.id); // limpiar sesión
-		break;
-	}
-
-	case BotStep.WAITING_CATEGORY: {
-		const category = capitalize(ctx.message.text.trim());
-		console.log(category)
-		const categoryData = await getCategoryUseCase('category_name', category);
-		console.log(categoryData)
-
-		if (!categoryData) {
-			await ctx.reply('❌ Categoría no encontrada. Intenta nuevamente.');
-			return;
-		}
-
-		session.categoryId = categoryData.id;
-		session.step = BotStep.WAITING_ACCOUNT_DATA;
-		setSession(ctx.chat.id, session);
-
-		await replyMarkdown(ctx, ACCOUNT_FORMAT_MESSAGE);
-		break;
-	}
-
-	case BotStep.WAITING_ACCOUNT_DATA: {
-		const regex =
-				/correo:\s*(\S+)\s+contraseña:\s*(\S+)\s+perfil:\s*(\S+)\s+pin:\s*(\d+)\s+Vence:\s*(.*)/i;
-		const match = ctx.message.text.trim().match(regex);
-
-		if (!match) {
-			await ctx.reply(`⚠ Formato no reconocido. Asegúrate de enviar algo como:\n\n${ACCOUNT_FORMAT_MESSAGE}`);
-			return;
-		}
-
-		const [, email, password, profile, pin, expiration] = match;
-
-		session.accountData = {
-			email,
-			password,
-			profile,
-			pin,
-			expiration,
-			clientName: '',
-		};
-		session.step = BotStep.WAITING_VALIDATE_USER;
-		setSession(ctx.chat.id, session);
-
-		await ctx.reply(
-			'👤 Ahora dime el nombre del cliente al que pertenece la cuenta:'
-		);
-		break;
-	}
-
-	case BotStep.WAITING_VALIDATE_USER: {
-		const account = session.accountData;
-		if (!account) {
-			resetSession(ctx.chat.id);
-			await ctx.reply(
-				'❌ Hubo un problema con los datos previos. Reinicia con /crear_cuenta.'
-			);
-			return;
-		}
-
-		const clientName = ctx.message.text.trim();
-		if (!clientName) {
-			await ctx.reply('⚠ Necesito el nombre del cliente. Intenta de nuevo:');
-			return;
-		}
-
-		session.accountData = { ...account, clientName };
-		setSession(ctx.chat.id, session);
-
-		const userData = await useCaseSpecificDataUser('name_user', clientName);
-
-		if (userData.empty) {
-			session.step = BotStep.WAITING_NEW_USER;
-			setSession(ctx.chat.id, session);
-			await ctx.reply(
-				`👤 No encuentro a "${clientName}".\n` +
-					'Por favor envía su teléfono y correo así:\n\n' +
-					'📞 3001234567 📧 cliente@ejemplo.com'
-			);
-			return;
-		}
-
-		const newAccount = await createNewAccountUseCase({
-			email_account: account.email,
-			pass_account: account.password,
-			name_profile: account.profile,
-			code_profile: parseInt(account.pin, 10),
-			expiration_date: account.expiration,
-			id_user: userData.docs[0].data().id,
-			id_category: session.categoryId!,
-		});
-
-		await replyMarkdown(
-			ctx,
-			`✅ Cuenta para *${clientName}* registrada con éxito.`,
-		);
-		resetSession(ctx.chat.id);
-
-		await replyWithAccountTemplate(ctx, newAccount);
-		break;
-	}
-
-	case BotStep.WAITING_NEW_USER: {
-		const account = session.accountData;
-		if (!account) {
-			resetSession(ctx.chat.id);
-			await ctx.reply('❌ Datos de la cuenta faltan. Por favor reinicia el proceso con /crear_cuenta.');
-			return;
-		}
-
-		const phoneMatch = ctx.message.text.match(/(\+?\d[\d\s-]{6,}\d)/);
-		const emailMatch = ctx.message.text.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
-
-		if (!phoneMatch || !emailMatch) {
-			await ctx.reply('⚠ Formato inválido. Envía el teléfono y correo así: 📞 3001234567 📧 cliente@ejemplo.com');
-			return;
-		}
-
-		const phone = phoneMatch[1].replace(/\s|-/g, '');
-		const email = emailMatch[0];
-		const { clientName } = account;
-		const userID = uuid();
-		const newUser = {
-			id: userID,
-			name_user: clientName,
-			cellphone_user: phone,
-			email_user: email,
-		};
-
-		await db.collection('users').add(newUser);
-		const newAccount = await createNewAccountUseCase({
-			email_account: account.email,
-			pass_account: account.password,
-			name_profile: account.profile,
-			code_profile: parseInt(account.pin, 10),
-			expiration_date: account.expiration,
-			id_user: userID,
-			id_category: session.categoryId!,
-		});
-
-		await replyMarkdown(
-			ctx,
-			`✅ Cuenta para *${clientName}* registrada con éxito.`,
-		);
-		resetSession(ctx.chat.id);
-
-		await replyWithAccountTemplate(ctx, newAccount);
-		break;
-	}
-	case BotStep.WAITING_ACCOUNT_GARANTY: {
-		const rawMessage = ctx.message.text;
-		const message = rawMessage.replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
-
-		const oldEmailMatch = message.match(/cuenta[_:\s]+([^\s]+)/i);
-		if (!oldEmailMatch) {
-			await ctx.reply('⚠️ No se pudo detectar el correo anterior. Asegúrate de seguir el formato correcto.');
-			return;
-		}
-		const oldEmail = oldEmailMatch[1].trim();
-
-		const accountsSnapshot = await db.collection('accounts').where('email_account', '==', oldEmail).get();
-
-		if (accountsSnapshot.empty) {
-			await ctx.reply(`❌ No se encontró ninguna cuenta con el correo *${oldEmail}*.`);
-			return;
-		}
-
-		const accountDoc = accountsSnapshot.docs[0];
-		const accountData = accountDoc.data() as Account;
-
-		const newEmail = message.match(/Correo:\s*([^\s]+)/i)?.[1]?.trim() || accountData.email_account;
-		const newPassword = message.match(/Clave:\s*([^\s]+)/i)?.[1]?.trim() || accountData.pass_account;
-		const newProfile = message.match(/Perfil\s*#?\s*(\S+)/i)?.[1]?.trim() || accountData.name_profile;
-		const newPin = message.match(/pin\s*(\d+)/i)?.[1]?.trim() || accountData.code_profile;
-		const newExpiration = message.match(/Vence:\s*([^\n]+)/i)?.[1]?.trim() || accountData.expiration_date;
-
-		await updateAccountUseCase(accountData.id!, {
-			...accountData,
-			email_account: newEmail,
-			pass_account: newPassword,
-			name_profile: newProfile,
-			code_profile: parseInt(newPin.toString(), 10),
-			expiration_date: newExpiration,
-		});
-
-		console.log(newEmail)
-		await ctx.reply(`✅ La cuenta *${newEmail}* ha sido actualizada exitosamente.`, { parse_mode: 'Markdown' });
-
+	if (results.length === 1) {
 		await replyWithAccountTemplate(ctx, {
-			email_account: newEmail,
-			pass_account: newPassword,
-			name_profile: newProfile,
-			code_profile: newPin,
-			expiration_date: newExpiration,
+			email_account: results[0].email_account,
+			pass_account: results[0].pass_account,
+			name_profile: results[0].name_profile,
+			code_profile: results[0].code_profile,
+			expiration_date: results[0].expiration_date,
 		});
-		resetSession(ctx.chat.id);
-		break;
+		resetSession(ctx.chat!.id);
+		return;
 	}
 
-	case BotStep.WAITING_UPDATE_ACCOUNT: {
-		const account = session.accountData;
-		if (!account) {
-			resetSession(ctx.chat.id);
-			await ctx.reply('❌ No se encontró la cuenta a actualizar. Repite /actualizar_cuenta.');
-			return;
-		}
+	await replyMarkdown(ctx, formatAccountsListMessage(results));
+	resetSession(ctx.chat!.id);
+};
 
-		const AccountRaw = parseAccountText(ctx.message.text)
-		const newAccount: Account = {
-			id: account.id!,
-			id_user: account.idUser!,
-			id_category: account.idCategory!,
-			code_profile: AccountRaw?.pin ? parseInt(AccountRaw.pin) : 0,
-			email_account: AccountRaw?.email ?? '',
-			expiration_date: AccountRaw?.rawExpire ?? '',
-			name_profile: AccountRaw?.profile ?? '',
-			pass_account: AccountRaw?.password ?? ''
-		}
+const handleWaitingCategory: BotTextHandler = async (ctx, session, text) => {
+	const category = capitalize(text.trim());
+	const categoryData = await getCategoryUseCase('category_name', category);
 
-		const responseAccount = await updateAccountUseCase(account.idDoc!, newAccount)
-		const newTemplate = await updateTemplateFromObject(ctx.message.text, responseAccount)
-		await ctx.reply(newTemplate, { parse_mode: 'Markdown' })
-		resetSession(ctx.chat.id);
-		break;
+	if (!categoryData) {
+		await replyMarkdown(ctx, BOT_MESSAGES.categoryNotFound);
+		return;
 	}
 
-	case BotStep.WAITING_EMAIL_TO_UPDATE_ACCOUNT: {
-		const email_account = ctx.message?.text?.trim();
-		if (!email_account) return;
+	session.categoryId = categoryData.id;
+	saveSessionStep(ctx.chat!.id, session, BotStep.WAITING_ACCOUNT_DATA);
+	await replyMarkdown(ctx, ACCOUNT_FORMAT_MESSAGE);
+};
 
-		const account = await getSpecificAccountUseCase('email_account', email_account);
-		if (!account.exists) {
-			await ctx.reply(`❌ No se encontró ninguna cuenta con el correo ${email_account}`);
-			return;
-		}
+const handleWaitingAccountData: BotTextHandler = async (ctx, session, text) => {
+	const parsedAccount = parseAccountText(text);
 
+	if (!parsedAccount?.email || !parsedAccount.password || !parsedAccount.profile || !parsedAccount.pin || !parsedAccount.rawExpire) {
+		await replyMarkdown(ctx, BOT_MESSAGES.accountFormatInvalid);
+		return;
+	}
+
+	session.accountData = {
+		email: parsedAccount.email,
+		password: parsedAccount.password,
+		profile: parsedAccount.profile,
+		pin: parsedAccount.pin,
+		expiration: parsedAccount.rawExpire,
+		clientName: '',
+	};
+
+	saveSessionStep(ctx.chat!.id, session, BotStep.WAITING_VALIDATE_USER);
+	await replyMarkdown(ctx, BOT_MESSAGES.clientNamePrompt);
+};
+
+const handleWaitingValidateUser: BotTextHandler = async (ctx, session, text) => {
+	const account = session.accountData;
+	if (!account) {
+		resetSession(ctx.chat!.id);
+		await replyMarkdown(ctx, BOT_MESSAGES.accountDataMissing);
+		return;
+	}
+
+	const clientName = text.trim();
+	if (!clientName) {
+		await replyMarkdown(ctx, BOT_MESSAGES.needClientName);
+		return;
+	}
+
+	session.accountData = { ...account, clientName };
+	setSession(ctx.chat!.id, session);
+
+	const userData = await useCaseSpecificDataUser('name_user', clientName);
+
+	if (userData.empty) {
+		saveSessionStep(ctx.chat!.id, session, BotStep.WAITING_NEW_USER);
+		await replyMarkdown(ctx, `👤 No encuentro a "${clientName}".\n\n${BOT_MESSAGES.userContactPrompt}`);
+		return;
+	}
+
+	const newAccount = await createNewAccountUseCase(createAccountFromSession(session, userData.docs[0].data().id));
+	await replyMarkdown(ctx, BOT_MESSAGES.accountCreated(clientName));
+	resetSession(ctx.chat!.id);
+	await replyWithAccountTemplate(ctx, newAccount);
+};
+
+const handleWaitingNewUser: BotTextHandler = async (ctx, session, text) => {
+	const account = session.accountData;
+	if (!account) {
+		resetSession(ctx.chat!.id);
+		await replyMarkdown(ctx, BOT_MESSAGES.accountDataMissing);
+		return;
+	}
+
+	const contact = parseContactData(text);
+	if (!contact) {
+		await replyMarkdown(ctx, BOT_MESSAGES.userContactInvalid);
+		return;
+	}
+
+	const userID = uuid();
+	await db.collection('users').add({
+		id: userID,
+		name_user: account.clientName,
+		cellphone_user: contact.phone,
+		email_user: contact.email,
+	});
+
+	const newAccount = await createNewAccountUseCase(createAccountFromSession(session, userID));
+	await replyMarkdown(ctx, BOT_MESSAGES.accountCreated(account.clientName));
+	resetSession(ctx.chat!.id);
+	await replyWithAccountTemplate(ctx, newAccount);
+};
+
+const handleWaitingAccountGaranty: BotTextHandler = async (ctx, _session, text) => {
+	const message = text.replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
+	const oldEmailMatch = message.match(/cuenta[_:\s]+([^\s]+)/i);
+
+	if (!oldEmailMatch) {
+		await replyMarkdown(ctx, BOT_MESSAGES.warrantyFormatInvalid);
+		return;
+	}
+
+	const oldEmail = oldEmailMatch[1].trim();
+	const accountsSnapshot = await db.collection('accounts').where('email_account', '==', oldEmail).get();
+
+	if (accountsSnapshot.empty) {
+		await replyMarkdown(ctx, BOT_MESSAGES.accountNotFoundByEmail(oldEmail));
+		return;
+	}
+
+	const accountDoc = accountsSnapshot.docs[0];
+	const accountData = accountDoc.data() as Account;
+	const parsedAccount = parseAccountText(message);
+
+	const updatedAccount: Account = {
+		...accountData,
+		email_account: parsedAccount?.email || accountData.email_account,
+		pass_account: parsedAccount?.password || accountData.pass_account,
+		name_profile: parsedAccount?.profile || accountData.name_profile,
+		code_profile: parsedAccount?.pin ? parseInt(parsedAccount.pin, 10) : accountData.code_profile,
+		expiration_date: parsedAccount?.rawExpire || accountData.expiration_date,
+	};
+
+	await updateAccountUseCase(accountData.id!, updatedAccount);
+	await replyMarkdown(ctx, BOT_MESSAGES.accountUpdated(updatedAccount.email_account));
+	await replyWithAccountTemplate(ctx, {
+		email_account: updatedAccount.email_account,
+		pass_account: updatedAccount.pass_account,
+		name_profile: updatedAccount.name_profile,
+		code_profile: updatedAccount.code_profile,
+		expiration_date: updatedAccount.expiration_date,
+	});
+	resetSession(ctx.chat!.id);
+};
+
+const handleWaitingUpdateAccount: BotTextHandler = async (ctx, session, text) => {
+	const account = session.accountData;
+	if (!account) {
+		resetSession(ctx.chat!.id);
+		await replyMarkdown(ctx, BOT_MESSAGES.accountUpdateMissing);
+		return;
+	}
+
+	const parsedAccount = parseAccountText(text);
+	if (!parsedAccount?.email || !parsedAccount.password || !parsedAccount.profile || !parsedAccount.pin || !parsedAccount.rawExpire) {
+		await replyMarkdown(ctx, BOT_MESSAGES.accountFormatInvalid);
+		return;
+	}
+
+	const newAccount: Account = {
+		id: account.id!,
+		id_user: account.idUser!,
+		id_category: account.idCategory!,
+		code_profile: parseInt(parsedAccount.pin, 10),
+		email_account: parsedAccount.email,
+		expiration_date: parsedAccount.rawExpire,
+		name_profile: parsedAccount.profile,
+		pass_account: parsedAccount.password,
+	};
+
+	const responseAccount = await updateAccountUseCase(account.idDoc!, newAccount);
+	await replyMarkdown(ctx, BOT_MESSAGES.accountUpdated(responseAccount.email_account));
+	await replyMarkdown(ctx, updateTemplateFromObject(text, responseAccount));
+	resetSession(ctx.chat!.id);
+};
+
+const handleWaitingEmailToUpdateAccount: BotTextHandler = async (ctx, session, text) => {
+	const emailAccount = text.trim();
+	if (!emailAccount) {
+		await replyMarkdown(ctx, BOT_MESSAGES.accountUpdateNotFound);
+		return;
+	}
+
+	try {
+		const account = await getSpecificAccountUseCase('email_account', emailAccount);
 		const accountData = account.data() as Account;
 
 		session.accountData = {
@@ -306,16 +264,37 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 			expiration: accountData.expiration_date,
 			password: accountData.pass_account,
 			pin: accountData.code_profile.toString(),
-			profile: accountData.name_profile
-		}
+			profile: accountData.name_profile,
+		};
 
-		session.step = BotStep.WAITING_UPDATE_ACCOUNT
-		setSession(ctx.chat.id, session);
-
-		await ctx.reply('✏️ Ahora envía la información de la cuenta a actualizar siguiendo el formato habitual.')
-
-		break;
-	}
+		saveSessionStep(ctx.chat!.id, session, BotStep.WAITING_UPDATE_ACCOUNT);
+		await replyMarkdown(ctx, BOT_MESSAGES.updateDataPrompt);
+	} catch (_error) {
+		await replyMarkdown(ctx, BOT_MESSAGES.accountUpdateNotFound);
 	}
 };
 
+const stepHandlers: Record<BotStep, BotTextHandler> = {
+	[BotStep.WAITING_EMAIL_GARANTY]: handleWaitingEmailGaranty,
+	[BotStep.WAITING_SEARCH_ACCOUNT]: handleWaitingSearchAccount,
+	[BotStep.WAITING_CATEGORY]: handleWaitingCategory,
+	[BotStep.WAITING_ACCOUNT_DATA]: handleWaitingAccountData,
+	[BotStep.WAITING_VALIDATE_USER]: handleWaitingValidateUser,
+	[BotStep.WAITING_NEW_USER]: handleWaitingNewUser,
+	[BotStep.WAITING_ACCOUNT_GARANTY]: handleWaitingAccountGaranty,
+	[BotStep.WAITING_UPDATE_ACCOUNT]: handleWaitingUpdateAccount,
+	[BotStep.WAITING_EMAIL_TO_UPDATE_ACCOUNT]: handleWaitingEmailToUpdateAccount,
+};
+
+export const handleTextMessage = async (ctx: Context, session: UserSession): Promise<void> => {
+	if (!ctx.chat || !ctx.message || !('text' in ctx.message)) {
+		return;
+	}
+
+	const handler = stepHandlers[session.step];
+	if (!handler) {
+		return;
+	}
+
+	await handler(ctx, session, ctx.message.text);
+};

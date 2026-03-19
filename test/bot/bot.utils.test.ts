@@ -1,6 +1,12 @@
 import { expect } from 'chai';
 import type { Context } from 'telegraf';
-import { replyMarkdown, replyWithAccountTemplate } from '../../src/bot/bot.utils';
+import {
+	buildHelpMessage,
+	formatAccountsListMessage,
+	parseContactData,
+	replyMarkdown,
+	replyWithAccountTemplate
+} from '../../src/bot/bot.utils';
 
 describe('bot.utils', () => {
 	describe('replyMarkdown', () => {
@@ -113,5 +119,45 @@ describe('bot.utils', () => {
 			expect(capturedMessage).to.include('5678');
 		});
 	});
-});
 
+	describe('formatAccountsListMessage', () => {
+		it('debería formatear una lista de cuentas', () => {
+			const result = formatAccountsListMessage([
+				{
+					email_account: 'test@example.com',
+					name_profile: 'Perfil1',
+					expiration_date: '12/31/2024'
+				}
+			]);
+
+			expect(result).to.include('Cuentas encontradas');
+			expect(result).to.include('test@example.com');
+			expect(result).to.include('Perfil1');
+		});
+	});
+
+	describe('buildHelpMessage', () => {
+		it('debería listar los comandos disponibles', () => {
+			const result = buildHelpMessage();
+
+			expect(result).to.include('/crear_cuenta');
+			expect(result).to.include('/ayuda');
+		});
+	});
+
+	describe('parseContactData', () => {
+		it('debería extraer teléfono y correo', () => {
+			const result = parseContactData('📞 3001234567 📧 cliente@ejemplo.com');
+
+			expect(result).to.deep.equal({
+				phone: '3001234567',
+				email: 'cliente@ejemplo.com'
+			});
+		});
+
+		it('debería retornar null si faltan datos', () => {
+			const result = parseContactData('solo texto');
+			expect(result).to.be.null;
+		});
+	});
+});

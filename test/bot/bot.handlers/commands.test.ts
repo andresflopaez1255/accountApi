@@ -12,9 +12,10 @@ describe('bot.handlers/commands', () => {
 	beforeEach(() => {
 		commandHandlers = new Map();
 		mockBot = {
-			command: (command: string, handler: Function) => {
+			command: ((command: string, handler: Function) => {
 				commandHandlers.set(command, handler);
-			}
+				return mockBot as Telegraf;
+			}) as any
 		};
 
 		// Limpiar sesiones antes de cada test
@@ -31,6 +32,7 @@ describe('bot.handlers/commands', () => {
 			expect(commandHandlers.has('buscar_cuentas')).to.be.true;
 			expect(commandHandlers.has('proximos_vencer')).to.be.true;
 			expect(commandHandlers.has('actualizar_cuenta')).to.be.true;
+			expect(commandHandlers.has('ayuda')).to.be.true;
 		});
 
 		it('debería establecer sesión WAITING_CATEGORY al ejecutar crear_cuenta', async () => {
@@ -147,6 +149,24 @@ describe('bot.handlers/commands', () => {
 			// Restaurar
 			(accountsController as any).getAccountsWithDateExpitarion = originalGetAccounts;
 		});
+
+		it('debería responder con la ayuda al ejecutar ayuda', async () => {
+			registerCommands(mockBot as Telegraf);
+			const handler = commandHandlers.get('ayuda');
+
+			let capturedMessage = '';
+			const mockCtx = {
+				chat: { id: 12345 },
+				reply: async (message: string) => {
+					capturedMessage = message;
+					return { message_id: 1 };
+				}
+			} as any;
+
+			await handler!(mockCtx);
+
+			expect(capturedMessage).to.include('/crear_cuenta');
+			expect(capturedMessage).to.include('/ayuda');
+		});
 	});
 });
-

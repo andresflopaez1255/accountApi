@@ -1,47 +1,48 @@
 import type { Telegraf } from 'telegraf';
-import { BotStep } from '../bot.types';
-import { resetSession, setSession } from '../bot.session';
-import { replyMarkdown } from '../bot.utils';
 import { getAccountsWithDateExpitarion } from '../../controllers/accounts.controllers';
+import { BOT_MESSAGES } from '../bot.constants';
+import { resetSession, setSession } from '../bot.session';
+import { BotStep } from '../bot.types';
+import { buildHelpMessage, formatAccountsListMessage, replyMarkdown } from '../bot.utils';
+
+type BotCommandHandler = Parameters<Telegraf['command']>[1];
+
+const createFlowCommand = (step: BotStep, message: string): BotCommandHandler => {
+	return async (ctx) => {
+		setSession(ctx.chat.id, { step });
+		await replyMarkdown(ctx, message);
+	};
+};
 
 export const registerCommands = (bot: Telegraf): void => {
-	// Comando para iniciar creación
-	bot.command('crear_cuenta', async (ctx) => {
-		setSession(ctx.chat.id, { step: BotStep.WAITING_CATEGORY });
-		await replyMarkdown(ctx, '📂 Ingresa la *categoría* de la cuenta:');
-	});
-
-	bot.command('garantia', async (ctx) => {
-		setSession(ctx.chat.id, { step: BotStep.WAITING_ACCOUNT_GARANTY });
-		await ctx.reply('✉️ Por favor envía el correo de la cuenta para extender la garantía o actualizar los datos:');
-	});
+	bot.command('crear_cuenta', createFlowCommand(BotStep.WAITING_CATEGORY, BOT_MESSAGES.categoryPrompt));
+	bot.command('garantia', createFlowCommand(BotStep.WAITING_ACCOUNT_GARANTY, BOT_MESSAGES.warrantyPrompt));
+	bot.command('buscar_cuentas', createFlowCommand(BotStep.WAITING_SEARCH_ACCOUNT, BOT_MESSAGES.searchPrompt));
+	bot.command(
+		'actualizar_cuenta',
+		createFlowCommand(BotStep.WAITING_EMAIL_TO_UPDATE_ACCOUNT, BOT_MESSAGES.updateEmailPrompt)
+	);
 
 	bot.command('cancelar', async (ctx) => {
 		resetSession(ctx.chat.id);
-		await ctx.reply('❌ Proceso cancelado. Puedes iniciar un nuevo proceso cuando desees.');
-	});
-
-	bot.command('buscar_cuentas', async (ctx) => {
-		setSession(ctx.chat.id, { step: BotStep.WAITING_SEARCH_ACCOUNT });
-		await ctx.reply('🔍 Por favor ingresa el correo o nombre del cliente para buscar las cuentas:');
+		await replyMarkdown(ctx, BOT_MESSAGES.cancelled);
 	});
 
 	bot.command('proximos_vencer', async (ctx) => {
-		await ctx.reply('🔍 Buscando cuentas proximas a vencer');
+		await replyMarkdown(ctx, BOT_MESSAGES.searchingUpcoming);
 
-		const data = await getAccountsWithDateExpitarion()
-		let responseMessage = '🔍 *Cuentas encontradas:*\n\n';
-		data.forEach((account, index) => {
-			console.log(account)
-			responseMessage += `${index + 1}. Usuario: *${account.email_account}*\n   Perfil: *${account.name_profile}*\n   Vence: *${account.expiration_date}*\n\n`;
-		});
-		await ctx.reply(responseMessage, { parse_mode: 'Markdown' });
-		resetSession(ctx.chat.id); // limpiar sesión
+		const accounts = await getAccountsWithDateExpitarion();
+		if (accounts.length === 0) {
+			await replyMarkdown(ctx, BOT_MESSAGES.searchNoResults);
+			resetSession(ctx.chat.id);
+			return;
+		}
+
+		await replyMarkdown(ctx, formatAccountsListMessage(accounts));
+		resetSession(ctx.chat.id);
 	});
 
-	bot.command('actualizar_cuenta', async (ctx) => {
-		setSession(ctx.chat.id, { step: BotStep.WAITING_EMAIL_TO_UPDATE_ACCOUNT });
-		await ctx.reply('Ingresa por favor el correo de la cuenta a actualizar')
+	bot.command('ayuda', async (ctx) => {
+		await replyMarkdown(ctx, buildHelpMessage());
 	});
 };
-

@@ -37,3 +37,12 @@ export type AccountTemplatePayload = {
 	expiration_date: string;
 };
 
+export type AccountListItem = Pick<
+	AccountTemplatePayload,
+	'email_account' | 'name_profile' | 'expiration_date'
+>;
+
+export type ParsedContactData = {
+	phone: string;
+	email: string;
+};
