@@ -62,6 +62,22 @@ describe('parseAccountsData', () => {
 			expect(result?.rawExpire).to.equal('12/31/2024');
 		});
 
+		it('debería parsear perfil con formato "perfil: 5"', () => {
+			const text = [
+				'correo: pruebaaaaa@gmail.com',
+				'contraseña: 230916',
+				'perfil: 5',
+				'pin: 9999',
+				'vence: 09/04/2026'
+			].join('\n');
+
+			const result = parseAccountText(text);
+
+			expect(result).to.not.be.null;
+			expect(result?.profile).to.equal('5');
+			expect(result?.pin).to.equal('9999');
+		});
+
 		it('debería retornar null para texto no válido', () => {
 			const result = parseAccountText(null as any);
 			expect(result).to.be.null;
@@ -152,4 +168,3 @@ describe('parseAccountsData', () => {
 		});
 	});
 });
-

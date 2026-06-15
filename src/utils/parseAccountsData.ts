@@ -72,7 +72,7 @@ function parseAccountText(text: string): ParsedAccountData | null {
 		/contrase(?:ñ|n)a\s*[:\-]?\s*([^\r\n]+)/i,
 	]);
 	const profile = readField(cleaned, [
-		/Perfil\s*#?\s*([^\s\r\n]+)/i,
+		/Perfil\s*(?:#|:)?\s*([^\s\r\n]+)/i,
 		/perfil\s*[:\-]?\s*([^\s\r\n]+)/i,
 	]);
 	const pin = readField(cleaned, [/pin\s*[:#]?\s*(\d{3,8})/i]);

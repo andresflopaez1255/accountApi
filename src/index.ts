@@ -12,7 +12,7 @@ import { getAccountsWithDateExpitarion } from './controllers/accounts.controller
 import sendMessage from './controllers/messages.controller';
 import { infoMessage } from './Interfaces';
 import { specs } from './swagger';
-import { managerBotController } from './bot/bot.controllers';
+import { managerBotCodexController } from './bot-codex/botCodex.controller';
 
 const app: Express = express();
 
@@ -87,4 +87,4 @@ app.listen(port, () => {
 	console.log(`✅ Server is running on port ${port	}`);
 });
 
-managerBotController(app);
+void managerBotCodexController();
