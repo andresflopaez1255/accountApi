@@ -1,11 +1,11 @@
 export const ACCOUNT_FORMAT_MESSAGE = [
-	'✉️ Envía los datos con este formato:',
+	'✉️ Envía los datos una línea por campo:',
 	'',
-	'correo: ejemplo@correo.com',
-	'contraseña: 123456',
-	'perfil: 2',
-	'pin: 4444',
-	'Vence: 26/12/2025',
+	'Correo: ejemplo@correo.com',
+	'Clave: 123456',
+	'Perfil: 2  (opcional, por defecto 1)',
+	'PIN: 4444  (opcional)',
+	'Vence: 04/09/2026',
 ].join('\n');
 
 export const BOT_COMMANDS = [

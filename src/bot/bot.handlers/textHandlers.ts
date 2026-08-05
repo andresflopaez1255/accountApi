@@ -3,7 +3,7 @@ import type { Context } from 'telegraf';
 import { v4 as uuid } from 'uuid';
 import { db } from '../../firebase';
 import { capitalize } from '../../utils/capitalizeString';
-import { parseAccountText, updateTemplateFromObject } from '../../utils/parseAccountsData';
+import { formatDigitalGame, formatGameSubscription, parseAccountText, updateTemplateFromObject } from '../../utils/parseAccountsData';
 import { getCategoryUseCase } from '../../usecases/categories/getCategory.usecase';
 import { useCaseSpecificDataUser } from '../../usecases/users/specificDataUser.usecase';
 import { createNewAccountUseCase } from '../../usecases/accounts/createNewAccount.usecase';
@@ -16,11 +16,51 @@ import { resetSession, setSession } from '../bot.session';
 import { ACCOUNT_FORMAT_MESSAGE } from '../bot.constants';
 import { replyMarkdown, replyWithAccountTemplate } from '../bot.utils';
 
+const fieldValue = (text: string, label: string): string => text.match(new RegExp(`^${label}\\s*:\\s*(.+)$`, 'im'))?.[1]?.trim() || '';
+const numericValue = (text: string, label: string): number => Number(fieldValue(text, label).replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+
+const saveSale = async (data: { type: 'game' | 'subscription'; service: string; email: string; password: string; clientName: string; price: number; cost: number; expiration?: string; accountType?: string }) => {
+	const customer = data.clientName ? await db.collection('users').where('name_user', '==', data.clientName).limit(1).get() : null;
+	const id = uuid();
+	await db.collection('sales').doc(id).set({
+		id,
+		line: data.type === 'game' ? 'game' : 'subscription',
+		service: data.service,
+		client_id: customer && !customer.empty ? customer.docs[0].data().id : '',
+		client_name: data.clientName || 'Venta sin cliente asociado',
+		price: data.price,
+		cost: data.cost,
+		payment_status: 'paid',
+		payment_method: 'Por confirmar',
+		sale_date: new Date().toISOString().slice(0, 10),
+		renewal_date: data.expiration || '',
+		created_at: new Date().toISOString(),
+	});
+};
+
 export const handleTextMessage = async (ctx: Context, session: UserSession): Promise<void> => {
 	if (!ctx.chat || !ctx.message || !('text' in ctx.message)) return;
 	
 	console.log(session)
 	switch (session.step) {
+	case BotStep.WAITING_GAME_SALE: {
+		const raw = ctx.message.text;
+		const game = fieldValue(raw, 'Juego'); const email = fieldValue(raw, 'Correo'); const password = fieldValue(raw, '(?:Clave|Contraseña)');
+		const accountType = fieldValue(raw, 'Tipo') || 'Principal'; const customer = fieldValue(raw, 'Cliente'); const price = numericValue(raw, 'Precio'); const cost = numericValue(raw, 'Costo');
+		if (!game || !email || !password || !price) { await ctx.reply('⚠️ Necesito Juego, Correo, Clave y Precio. Tipo, Cliente y Costo pueden ajustarse después.'); return; }
+		await saveSale({ type: 'game', service: game, email, password, clientName: customer, price, cost, accountType });
+		await replyMarkdown(ctx, formatDigitalGame({ juego: game, servicio: game, usuario: email, clave: password, tipoCuenta: accountType }));
+		await ctx.reply(`✅ Venta registrada: ${game} · $${price.toLocaleString('es-CO')}`); resetSession(ctx.chat.id); break;
+	}
+	case BotStep.WAITING_SUBSCRIPTION_SALE: {
+		const raw = ctx.message.text;
+		const subscription = fieldValue(raw, '(?:Suscripción|Suscripcion)'); const email = fieldValue(raw, 'Correo'); const password = fieldValue(raw, '(?:Clave|Contraseña)');
+		const expiration = fieldValue(raw, 'Vence'); const customer = fieldValue(raw, 'Cliente'); const price = numericValue(raw, 'Precio'); const cost = numericValue(raw, 'Costo');
+		if (!subscription || !email || !password || !expiration || !price) { await ctx.reply('⚠️ Necesito Suscripción, Correo, Clave, Vence y Precio.'); return; }
+		await saveSale({ type: 'subscription', service: subscription, email, password, clientName: customer, price, cost, expiration });
+		await replyMarkdown(ctx, formatGameSubscription({ servicio: subscription, usuario: email, clave: password, vence: expiration }));
+		await ctx.reply(`✅ Venta registrada: ${subscription} · $${price.toLocaleString('es-CO')}`); resetSession(ctx.chat.id); break;
+	}
 
 	case BotStep.WAITING_EMAIL_GARANTY: {
 		session.step = BotStep.WAITING_ACCOUNT_GARANTY;

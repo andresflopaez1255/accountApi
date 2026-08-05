@@ -5,7 +5,8 @@ import { db } from '../../firebase';
 import { getAccountsWithDateExpitarion } from '../../controllers/accounts.controllers';
 
 const menu = Markup.inlineKeyboard([
-	[Markup.button.callback('➕ Nueva cuenta', 'menu:create'), Markup.button.callback('🔎 Buscar', 'menu:search')],
+	[Markup.button.callback('➕ Cuenta streaming', 'menu:create'), Markup.button.callback('🎮 Vender juego', 'menu:game')],
+	[Markup.button.callback('🚀 Vender suscripción', 'menu:subscription'), Markup.button.callback('🔎 Buscar', 'menu:search')],
 	[Markup.button.callback('⏰ Vencimientos', 'menu:expiring'), Markup.button.callback('❔ Ayuda', 'menu:help')],
 ]);
 
@@ -35,6 +36,8 @@ export const registerCommands = (bot: Telegraf): void => {
 
 	bot.action('menu:create', async (ctx) => { if (!ctx.chat) return; await ctx.answerCbQuery(); setSession(ctx.chat.id, { step: BotStep.WAITING_CATEGORY }); await showCategories(ctx); });
 	bot.action('menu:search', async (ctx) => { if (!ctx.chat) return; await ctx.answerCbQuery(); setSession(ctx.chat.id, { step: BotStep.WAITING_SEARCH_ACCOUNT }); await ctx.reply('🔎 Escribe el correo de la cuenta o el nombre del cliente.'); });
+	bot.action('menu:game', async (ctx) => { if (!ctx.chat) return; await ctx.answerCbQuery(); setSession(ctx.chat.id, { step: BotStep.WAITING_GAME_SALE }); await ctx.reply('🎮 *Venta de juego digital*\n\nJuego: EA Sports FC 25\nCorreo: correo@ejemplo.com\nClave: contraseña\nTipo: Principal\nCliente: Nombre del cliente\nPrecio: 80000\nCosto: 50000', { parse_mode: 'Markdown' }); });
+	bot.action('menu:subscription', async (ctx) => { if (!ctx.chat) return; await ctx.answerCbQuery(); setSession(ctx.chat.id, { step: BotStep.WAITING_SUBSCRIPTION_SALE }); await ctx.reply('🚀 *Venta de suscripción*\n\nSuscripción: PS Plus Extra\nCorreo: correo@ejemplo.com\nClave: contraseña\nVence: 04/09/2026\nCliente: Nombre del cliente\nPrecio: 60000\nCosto: 40000', { parse_mode: 'Markdown' }); });
 	bot.action('menu:expiring', async (ctx) => { await ctx.answerCbQuery(); await ctx.reply('Usa /proximos_vencer para consultar la agenda.'); });
 	bot.action('menu:help', async (ctx) => { await ctx.answerCbQuery(); await ctx.reply('Usa los botones del menú. Puedes cancelar cualquier flujo con /cancelar.'); });
 	bot.action(/^category:(.+)$/, async (ctx) => {

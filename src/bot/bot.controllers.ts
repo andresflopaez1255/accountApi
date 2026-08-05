@@ -25,9 +25,13 @@ export const managerBotController = async (_app: Express) => {
 	_app.use(bot.webhookCallback(webhookPath));
 
 	const publicUrl = process.env.BOT_WEBHOOK_URL;
-	if (publicUrl) void bot.telegram.setWebhook(`${publicUrl.replace(/\/$/, '')}${webhookPath}`);
-
-	console.log(`🤖 Telegram webhook path configured at ${webhookPath}`);
+	try {
+		if (publicUrl) await bot.telegram.setWebhook(`${publicUrl.replace(/\/$/, '')}${webhookPath}`);
+		console.log(`🤖 Telegram webhook path configured at ${webhookPath}`);
+	} catch (error) {
+		console.error('Telegram webhook could not be configured. Check BOT_TOKEN and BOT_WEBHOOK_URL.', error);
+		return;
+	}
 
 
 
@@ -44,5 +48,9 @@ export const managerBotController = async (_app: Express) => {
 	});
 
 	// Configurar comandos del bot
-	void bot.telegram.setMyCommands(BOT_COMMANDS);
+	try {
+		await bot.telegram.setMyCommands(BOT_COMMANDS);
+	} catch (error) {
+		console.error('Telegram commands could not be configured. Check BOT_TOKEN.', error);
+	}
 }
