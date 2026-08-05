@@ -9,6 +9,8 @@ export type UserAccountData = {
 	pin: string;
 	expiration: string;
 	clientName: string;
+	price?: number;
+	cost?: number;
 };
 
 export enum BotStep {

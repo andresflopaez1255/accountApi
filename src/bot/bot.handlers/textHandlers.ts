@@ -19,13 +19,14 @@ import { replyMarkdown, replyWithAccountTemplate } from '../bot.utils';
 const fieldValue = (text: string, label: string): string => text.match(new RegExp(`^${label}\\s*:\\s*(.+)$`, 'im'))?.[1]?.trim() || '';
 const numericValue = (text: string, label: string): number => Number(fieldValue(text, label).replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
 
-const saveSale = async (data: { type: 'game' | 'subscription'; service: string; email: string; password: string; clientName: string; price: number; cost: number; expiration?: string; accountType?: string }) => {
+const saveSale = async (data: { type: 'game' | 'subscription' | 'streaming'; service: string; email: string; password: string; clientName: string; price: number; cost: number; expiration?: string; accountType?: string; accountId?: string }) => {
 	const customer = data.clientName ? await db.collection('users').where('name_user', '==', data.clientName).limit(1).get() : null;
 	const id = uuid();
 	await db.collection('sales').doc(id).set({
 		id,
-		line: data.type === 'game' ? 'game' : 'subscription',
+		line: data.type,
 		service: data.service,
+		account_id: data.accountId || '',
 		client_id: customer && !customer.empty ? customer.docs[0].data().id : '',
 		client_name: data.clientName || 'Venta sin cliente asociado',
 		price: data.price,
@@ -127,9 +128,11 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 		const profile = raw.match(/perfil\s*:\s*([^\n]+)/i)?.[1]?.trim() || '1';
 		const pin = raw.match(/pin\s*:\s*(\d+)/i)?.[1]?.trim() || '';
 		const expiration = raw.match(/vence\s*:\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i)?.[1]?.trim();
+		const price = numericValue(raw, 'Precio');
+		const cost = numericValue(raw, 'Costo');
 
-		if (!email || !password || !expiration) {
-			await ctx.reply('⚠️ Necesito Correo, Clave y Vence. El Perfil y el PIN son opcionales.');
+		if (!email || !password || !expiration || !price) {
+			await ctx.reply('⚠️ Necesito Correo, Clave, Vence y Precio. El Perfil, PIN y Costo son opcionales.');
 			return;
 		}
 
@@ -140,6 +143,8 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 			pin,
 			expiration,
 			clientName: '',
+			price,
+			cost,
 		};
 		session.step = BotStep.WAITING_VALIDATE_USER;
 		setSession(ctx.chat.id, session);
@@ -191,6 +196,8 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 			id_user: userData.docs[0].data().id,
 			id_category: session.categoryId!,
 		});
+		const category = await getCategoryUseCase('id', session.categoryId!);
+		await saveSale({ type: 'streaming', service: category?.category_name || 'Streaming', email: account.email, password: account.password, clientName, price: account.price || 0, cost: account.cost || 0, expiration: account.expiration, accountId: newAccount.id });
 
 		await replyMarkdown(
 			ctx,
@@ -198,7 +205,7 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 		);
 		resetSession(ctx.chat.id);
 
-		await replyWithAccountTemplate(ctx, newAccount);
+		await replyWithAccountTemplate(ctx, { ...newAccount, service: category?.category_name });
 		break;
 	}
 
@@ -239,6 +246,8 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 			id_user: userID,
 			id_category: session.categoryId!,
 		});
+		const category = await getCategoryUseCase('id', session.categoryId!);
+		await saveSale({ type: 'streaming', service: category?.category_name || 'Streaming', email: account.email, password: account.password, clientName, price: account.price || 0, cost: account.cost || 0, expiration: account.expiration, accountId: newAccount.id });
 
 		await replyMarkdown(
 			ctx,
@@ -246,7 +255,7 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 		);
 		resetSession(ctx.chat.id);
 
-		await replyWithAccountTemplate(ctx, newAccount);
+		await replyWithAccountTemplate(ctx, { ...newAccount, service: category?.category_name });
 		break;
 	}
 	case BotStep.WAITING_ACCOUNT_GARANTY: {

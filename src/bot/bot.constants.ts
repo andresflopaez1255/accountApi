@@ -6,6 +6,8 @@ export const ACCOUNT_FORMAT_MESSAGE = [
 	'Perfil: 2  (opcional, por defecto 1)',
 	'PIN: 4444  (opcional)',
 	'Vence: 04/09/2026',
+	'Precio: 25000',
+	'Costo: 10000  (opcional)',
 ].join('\n');
 
 export const BOT_COMMANDS = [
