@@ -7,10 +7,14 @@ export const resetSession = (chatId: number): void => {
 };
 
 export const getSession = (chatId: number): UserSession | undefined => {
-	return userSessions[chatId];
+	const session = userSessions[chatId];
+	if (session?.expiresAt && session.expiresAt < Date.now()) {
+		resetSession(chatId);
+		return undefined;
+	}
+	return session;
 };
 
 export const setSession = (chatId: number, session: UserSession): void => {
-	userSessions[chatId] = session;
+	userSessions[chatId] = { ...session, createdAt: session.createdAt || Date.now(), expiresAt: Date.now() + 20 * 60 * 1000 };
 };
-

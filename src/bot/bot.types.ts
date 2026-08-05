@@ -12,10 +12,12 @@ export type UserAccountData = {
 };
 
 export enum BotStep {
+	WAITING_MENU = 'WAITING_MENU',
 	WAITING_CATEGORY = 'WAITING_CATEGORY',
 	WAITING_ACCOUNT_DATA = 'WAITING_ACCOUNT_DATA',
 	WAITING_VALIDATE_USER = 'WAITING_VALIDATE_USER',
 	WAITING_NEW_USER = 'WAITING_NEW_USER',
+	WAITING_CONFIRM_ACCOUNT = 'WAITING_CONFIRM_ACCOUNT',
 	WAITING_ACCOUNT_GARANTY = 'WAITING_ACCOUNT_GARANTY',
 	WAITING_EMAIL_GARANTY = 'WAITING_EMAIL_GARANTY',
 	WAITING_SEARCH_ACCOUNT = 'WAITING_SEARCH_ACCOUNT',
@@ -27,6 +29,8 @@ export type UserSession = {
 	step: BotStep;
 	categoryId?: string;
 	accountData?: UserAccountData;
+	createdAt?: number;
+	expiresAt?: number;
 };
 
 export type AccountTemplatePayload = {
@@ -35,5 +39,5 @@ export type AccountTemplatePayload = {
 	name_profile: string;
 	code_profile: number | string;
 	expiration_date: string;
+	service?: string;
 };
-

@@ -4,7 +4,7 @@ import { mapAccountWithCatAndUserUseCase } from './mapAccountWithCatAndUser.usec
 
 export const getAllAccountsUseCase = async () => {
 	const snapshot = await db.collection('accounts').orderBy('expiration_date', 'desc').get();
-	const accounts = snapshot.docs.map(doc => doc.data());
+	const accounts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || doc.id }));
 
 	const enrichedAccounts = mapAccountWithCatAndUserUseCase(accounts);
 

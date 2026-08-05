@@ -18,7 +18,7 @@ export const deleteAccountUseCase = async (id: string) => {
 
 	
 	const user = await useCaseSpecificDataUser('id', accountData.id_user);
-	if (!user) {
+	if (user.empty) {
 		throw new Error('User not found');
 	}
    

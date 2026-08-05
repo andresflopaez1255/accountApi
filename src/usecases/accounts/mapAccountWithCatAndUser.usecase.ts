@@ -17,7 +17,8 @@ const mapAccountWithCatAndUserUseCase = async (accounts: FirebaseFirestore.Docum
 				...account,
 				name_user: userData?.name_user || null,
 				cellphone_user: userData?.cellphone_user || null,
-				category:  categoryData?.category_name || null,
+				category: categoryData?.category_name || null,
+				category_name: categoryData?.category_name || null,
 			};
 		})
 	);

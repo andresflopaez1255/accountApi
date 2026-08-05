@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* import { categories_account, Prisma, user } from '@prisma/client';
- */ import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 
 import messageBody from '../utils/messageBody';
 import { MessagesAccounts } from '../utils/messages';
@@ -33,9 +32,8 @@ async function getAllAccounts(
 				.send(messageBody(accounts, MessagesAccounts.successful, true));
 		}
 	} catch (error) {
-		console.log(error);
 		return res
-			.status(400)
+			.status(500)
 			.send(messageBody(null, MessagesAccounts.error, false));
 	}
 }
@@ -50,6 +48,7 @@ async function getAccountsWithDateExpitarion() {
 				const data = doc.data();
 				const userData = await useCaseSpecificDataUser('id', data.id_user);
 				const categoryInfo = await getCategoryUseCase('id', data.id_category)
+				if (userData.empty) return null;
 				const userinfo = userData.docs[0].data();
 			
 				const expiration = moment(data.expiration_date, 'MM/DD/YYYY');
@@ -81,11 +80,11 @@ async function addAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
 	try {
 
-		const newAccount = createNewAccountUseCase(account);
+		const newAccount = await createNewAccountUseCase(account);
 
-		res.status(200).json(messageBody(newAccount, MessagesAccounts.created, true));
+		res.status(201).json(messageBody(newAccount, MessagesAccounts.created, true));
 	} catch (error) {
-		res.status(401).json(messageBody(error, MessagesAccounts.error, false));
+		res.status(400).json(messageBody(null, MessagesAccounts.error, false));
 	}
 }
 
@@ -97,13 +96,12 @@ async function updateAccount(req: Request, res: Response) {
 
 		res.status(200).json(messageBody(result, MessagesAccounts.updated, true));
 	} catch (error) {
-		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
+		res.status(400).json(messageBody(null, MessagesAccounts.error, false));
 	}
 }
 
 async function deleteAccount(req: Request, res: Response) {
 	res.setHeader('Content-Type', 'application/json');
-	console.log(req.query)
 	try {
 		const accountId = req.query.id as string;
 		const accountData = await deleteAccountUseCase(accountId);
@@ -111,10 +109,9 @@ async function deleteAccount(req: Request, res: Response) {
 			.status(200)
 			.json(messageBody(accountData, MessagesAccounts.deleted, true));
 	} catch (error) {
-		console.log(error)
 		return res
 			.status(400)
-			.json(messageBody(error, MessagesAccounts.error, false));
+			.json(messageBody(null, MessagesAccounts.error, false));
 	}
 }
 
@@ -123,11 +120,9 @@ async function searchAccount(req: Request, res: Response) {
 	const params = req.query.q as string;
 	try {
 		const result = await seacrhDataAccountsUseCase(params);
-		console.log(result)
-		
-		res.status(200).json(messageBody(result, MessagesAccounts.updated, true));
+		res.status(200).json(messageBody(result, MessagesAccounts.successful, true));
 	} catch (error) {
-		res.status(400).json(messageBody(error, MessagesAccounts.error, false));
+		res.status(400).json(messageBody(null, MessagesAccounts.error, false));
 	}
 	
 }

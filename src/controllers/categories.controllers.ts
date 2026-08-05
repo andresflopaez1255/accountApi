@@ -1,90 +1,55 @@
 import { Request, Response } from 'express';
-import prisma from '../utils/dbClient';
+import { v4 as uuid } from 'uuid';
+import { db } from '../firebase';
 import messageBody from '../utils/messageBody';
 import { MessagesCategories } from '../utils/messages';
 import { getAllCategoriesUseCase } from '../usecases/categories/getAllCategories.usecase';
 
+const categories = db.collection('categories_account');
+const findCategory = async (id: string) => {
+	const direct = await categories.doc(id).get();
+	if (direct.exists) return direct;
+	const legacy = await categories.where('id', '==', id).limit(1).get();
+	return legacy.docs[0];
+};
 
-
-async function getCategories(_req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>  {
+async function getCategories(_req: Request, res: Response): Promise<void> {
 	try {
-		const allCategories = await getAllCategoriesUseCase();
-		console.log(allCategories)
-		if (!allCategories.length) {
-			return res.status(200).send(messageBody(allCategories, MessagesCategories.notSuccessful, true));
-		}else {
-			return res.status(200).send(messageBody(allCategories, MessagesCategories.successful, true));
-
-		}
-	} catch (error) {
-		return res.status(200).send(messageBody(null, MessagesCategories.error, true));
-		console.log(error);
-	}
-
-
+		const data = await getAllCategoriesUseCase();
+		res.status(200).json(messageBody(data, data.length ? MessagesCategories.successful : MessagesCategories.notSuccessful, true));
+	} catch (_error) { res.status(500).json(messageBody(null, MessagesCategories.error, false)); }
 }
-
-async function addCategory(req:Request, res: Response) {
-	const category = req.body
+async function addCategory(req: Request, res: Response): Promise<void> {
 	try {
-		const CategoryIfExist = await prisma.categories_account.findFirst({
-			where: {
-				category_name: category.category_name
-			}
-		}).catch(console.log)
-		console.log(CategoryIfExist)
-		if(!CategoryIfExist){
-			await prisma.categories_account.create({
-				data:category
-			}).catch(console.log); 
-			
-			res.status(200).json(messageBody(null,MessagesCategories.created,true))
-		}
-		res.status(202).json(messageBody(null,'category if exist',false))
-	} catch (error) {
-		res.status(401).json(messageBody(error,MessagesCategories.error,false))
-	}
+		const category_name = String(req.body.category_name).trim();
+		const existing = await categories.where('category_name', '==', category_name).limit(1).get();
+		if (!existing.empty) { res.status(409).json(messageBody(null, 'Category already exists', false)); return; }
+		const id = uuid(); const category = { id, category_name, created_at: new Date().toISOString() };
+		await categories.doc(id).set(category);
+		res.status(201).json(messageBody(category, MessagesCategories.created, true));
+	} catch (_error) { res.status(500).json(messageBody(null, MessagesCategories.error, false)); }
 }
-
-async function updateCategory(req:Request, res:Response) {
-	
-	
+async function updateCategory(req: Request, res: Response): Promise<void> {
 	try {
-		
-		const result = await prisma.categories_account.update({
-			where: {
-				id: parseInt('' + req.query.id)
-			},
-			data: req.body
-		})
-		res.status(200).json(messageBody(result,MessagesCategories.updated,true))
-	} catch (error) {
-		res.status(400).json(messageBody(error,MessagesCategories.error,false))
-	}
+		const id = String(req.query.id || req.body.id || '');
+		if (!id) { res.status(422).json(messageBody(null, 'Category id is required', false)); return; }
+		const doc = await findCategory(id);
+		if (!doc || !doc.exists) { res.status(404).json(messageBody(null, 'Category not found', false)); return; }
+		const ref = doc.ref;
+		const category_name = String(req.body.category_name).trim();
+		await ref.update({ category_name, updated_at: new Date().toISOString() });
+		res.status(200).json(messageBody({ id, category_name }, MessagesCategories.updated, true));
+	} catch (_error) { res.status(500).json(messageBody(null, MessagesCategories.error, false)); }
 }
-
-async function deleteCategory(req:Request,res:Response) {
-	console.log( req.query.id)
+async function deleteCategory(req: Request, res: Response): Promise<void> {
 	try {
-		
-
-		const result = await prisma.categories_account.delete({
-			where: {
-				id:  parseInt(''+req.query.id)
-			}
-
-		})
-
-		
-		res.status(200).json(messageBody(result,MessagesCategories.deleted,true))
-	} catch (error) {
-		res.status(400).json(messageBody(error,MessagesCategories.error,false))
-	}
+		const id = String(req.query.id || '');
+		if (!id) { res.status(422).json(messageBody(null, 'Category id is required', false)); return; }
+		const category = await findCategory(id); if (!category || !category.exists) { res.status(404).json(messageBody(null, 'Category not found', false)); return; }
+		const ref = category.ref;
+		const accounts = await db.collection('accounts').where('id_category', '==', id).limit(1).get();
+		if (!accounts.empty) { res.status(409).json(messageBody(null, 'Category is assigned to accounts and cannot be deleted', false)); return; }
+		await ref.delete(); res.status(200).json(messageBody({ id }, MessagesCategories.deleted, true));
+	} catch (_error) { res.status(500).json(messageBody(null, MessagesCategories.error, false)); }
 }
-
-export {
-	getCategories,
-	addCategory,
-	updateCategory,
-	deleteCategory
-}
+export { getCategories, addCategory, updateCategory, deleteCategory };

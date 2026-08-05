@@ -7,14 +7,27 @@ import { BOT_COMMANDS } from './bot.constants';
 
 export const managerBotController = async (_app: Express) => {
 	void _app;
-	const bot = new Telegraf('7825975702:AAERv2QdXQhZm-9P0VAvwI0iRLjq05kKiHU');
+	const token = process.env.BOT_TOKEN;
+	if (!token) {
+		console.warn('Telegram bot disabled: BOT_TOKEN is not configured.');
+		return;
+	}
+	const bot = new Telegraf(token);
+	const allowedChats = (process.env.BOT_ALLOWED_CHAT_IDS || '').split(',').map((value) => value.trim()).filter(Boolean);
+	bot.use(async (ctx, next) => {
+		if (allowedChats.length && (!ctx.chat || !allowedChats.includes(String(ctx.chat.id)))) {
+			if ('reply' in ctx) await ctx.reply('⛔ No tienes autorización para usar este bot.');
+			return;
+		}
+		return next();
+	});
 	const webhookPath = `/bot${bot.secretPathComponent()}`;
 	_app.use(bot.webhookCallback(webhookPath));
 
-	const webhookUrl = `https://accountapi-8smd.onrender.com${webhookPath}`;
-	bot.telegram.setWebhook(webhookUrl);
+	const publicUrl = process.env.BOT_WEBHOOK_URL;
+	if (publicUrl) void bot.telegram.setWebhook(`${publicUrl.replace(/\/$/, '')}${webhookPath}`);
 
-	console.log(`🤖 Webhook configurado en ${webhookUrl}`);
+	console.log(`🤖 Telegram webhook path configured at ${webhookPath}`);
 
 
 
@@ -31,5 +44,5 @@ export const managerBotController = async (_app: Express) => {
 	});
 
 	// Configurar comandos del bot
-	bot.telegram.setMyCommands(BOT_COMMANDS);
+	void bot.telegram.setMyCommands(BOT_COMMANDS);
 }

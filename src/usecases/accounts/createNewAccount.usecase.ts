@@ -6,10 +6,10 @@ import { getCategoryUseCase } from '../categories/getCategory.usecase';
 import { Account } from '../../Interfaces';
 
 export const createNewAccountUseCase = async (account: Account) => {
-	const newaccount:Account = { id: uuid(), ...account }
+	const newaccount: Account & { id: string } = { ...account, id: uuid() };
 	const categoryID = account.id_category;
 	const categoryInfo = await getCategoryUseCase('id', categoryID);
-	await db.collection('accounts').add(newaccount);
+	const accountRef = db.collection('accounts').doc(newaccount.id);
 	const user = await useCaseSpecificDataUser('id', account.id_user);
 
 
@@ -18,9 +18,14 @@ export const createNewAccountUseCase = async (account: Account) => {
 
 		const accounts = userData.accounts || [];
 		accounts.push({ ...newaccount, category: categoryInfo?.category_name || null });
-		await db.collection('users').doc(user.docs[0].id).update({
+		const batch = db.batch();
+		batch.set(accountRef, { ...newaccount, created_at: new Date().toISOString() });
+		batch.update(db.collection('users').doc(user.docs[0].id), {
 			accounts: accounts,
 		});
+		await batch.commit();
+	} else {
+		throw new Error('User not found');
 	}
 	return newaccount;
 }

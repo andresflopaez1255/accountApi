@@ -47,6 +47,7 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 				name_profile: results[0].name_profile,
 				code_profile: results[0].code_profile,
 				expiration_date: results[0].expiration_date,
+				service: (results[0] as Account & { category?: string }).category,
 			});
 			resetSession(ctx.chat.id); // limpiar sesión
 			return;
@@ -80,16 +81,17 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 	}
 
 	case BotStep.WAITING_ACCOUNT_DATA: {
-		const regex =
-				/correo:\s*(\S+)\s+contraseña:\s*(\S+)\s+perfil:\s*(\S+)\s+pin:\s*(\d+)\s+Vence:\s*(.*)/i;
-		const match = ctx.message.text.trim().match(regex);
+		const raw = ctx.message.text;
+		const email = raw.match(/correo\s*:\s*([^\s]+)/i)?.[1]?.trim();
+		const password = raw.match(/(?:clave|contraseña)\s*:\s*([^\n]+)/i)?.[1]?.trim();
+		const profile = raw.match(/perfil\s*:\s*([^\n]+)/i)?.[1]?.trim() || '1';
+		const pin = raw.match(/pin\s*:\s*(\d+)/i)?.[1]?.trim() || '';
+		const expiration = raw.match(/vence\s*:\s*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/i)?.[1]?.trim();
 
-		if (!match) {
-			await ctx.reply(`⚠ Formato no reconocido. Asegúrate de enviar algo como:\n\n${ACCOUNT_FORMAT_MESSAGE}`);
+		if (!email || !password || !expiration) {
+			await ctx.reply('⚠️ Necesito Correo, Clave y Vence. El Perfil y el PIN son opcionales.');
 			return;
 		}
-
-		const [, email, password, profile, pin, expiration] = match;
 
 		session.accountData = {
 			email,
@@ -144,7 +146,7 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 			email_account: account.email,
 			pass_account: account.password,
 			name_profile: account.profile,
-			code_profile: parseInt(account.pin, 10),
+			code_profile: account.pin ? parseInt(account.pin, 10) : 0,
 			expiration_date: account.expiration,
 			id_user: userData.docs[0].data().id,
 			id_category: session.categoryId!,
@@ -192,7 +194,7 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 			email_account: account.email,
 			pass_account: account.password,
 			name_profile: account.profile,
-			code_profile: parseInt(account.pin, 10),
+			code_profile: account.pin ? parseInt(account.pin, 10) : 0,
 			expiration_date: account.expiration,
 			id_user: userID,
 			id_category: session.categoryId!,
@@ -318,4 +320,3 @@ export const handleTextMessage = async (ctx: Context, session: UserSession): Pro
 	}
 	}
 };
-

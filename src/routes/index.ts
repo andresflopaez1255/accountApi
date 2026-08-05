@@ -8,6 +8,7 @@ import {
 } from '../controllers/accounts.controllers';
 import { vendorLogIn, vendorRecoveryPass, vendorRegistration } from '../controllers/auth.controllers';
 import { addCategory, getCategories } from '../controllers/categories.controllers';
+import { updateCategory, deleteCategory } from '../controllers/categories.controllers';
 import {
 	addUser,
 	deleteUser,
@@ -16,6 +17,9 @@ import {
 	updateUser,
 } from '../controllers/users.controllers';
 import Routes from './routes.names';
+import { requireAuth } from '../middlewares/auth.middleware';
+import { validate, validateAccount, validateCategory, validateUser, validateVendorLogin, validateVendorRegistration } from '../middlewares/validation.middleware';
+import { addIncident, addProduct, addProvider, addSale, deleteIncident, deleteProduct, deleteProvider, deleteSale, getBusinessSummary, getClientHistory, getIncidents, getProducts, getProviders, getSales, updateIncident, updateProduct, updateProvider, updateSale } from '../controllers/operations.controllers';
 
 const router = express.Router();
 const jsonParser = express.json();
@@ -116,7 +120,7 @@ const jsonParser = express.json();
  *
  */
 
-router.get(Routes.users, getUsers);
+router.get(Routes.users, requireAuth, getUsers);
 
 /**
  * @swagger
@@ -152,7 +156,7 @@ router.get(Routes.users, getUsers);
  *
  *
  */
-router.post(Routes.addUser, jsonParser, addUser);
+router.post(Routes.addUser, requireAuth, jsonParser, validate(validateUser), addUser);
 /**
  * @swagger
  * /update_user:
@@ -190,7 +194,7 @@ router.post(Routes.addUser, jsonParser, addUser);
  *                
  * 
   */
-router.post(Routes.updateUser, jsonParser, updateUser);
+router.post(Routes.updateUser, requireAuth, jsonParser, validate(validateUser), updateUser);
 /**
  * @swagger
  * /delete_user:
@@ -223,8 +227,8 @@ router.post(Routes.updateUser, jsonParser, updateUser);
  *                
  * 
   */
-router.delete(`${Routes.deleteUser}`, deleteUser);
-router.get(Routes.searchUser, searchUsers);
+router.delete(`${Routes.deleteUser}`, requireAuth, deleteUser);
+router.get(Routes.searchUser, requireAuth, searchUsers);
 
 // generate docs for categories endpoints
 
@@ -248,9 +252,11 @@ router.get(Routes.searchUser, searchUsers);
  *
  */
 
-router.get(Routes.categories, getCategories);
+router.get(Routes.categories, requireAuth, getCategories);
 
-router.post(Routes.addCategory, jsonParser, addCategory,);
+router.post(Routes.addCategory, requireAuth, jsonParser, validate(validateCategory), addCategory);
+router.post(Routes.updateCategory, requireAuth, jsonParser, validate(validateCategory), updateCategory);
+router.delete(Routes.deleteCategory, requireAuth, deleteCategory);
 
 //accounts endpoints
 
@@ -273,7 +279,7 @@ router.post(Routes.addCategory, jsonParser, addCategory,);
  *
  *
  */
-router.get(Routes.accounts, getAllAccounts);
+router.get(Routes.accounts, requireAuth, getAllAccounts);
 /**
  * @swagger
  * /new_account:
@@ -302,7 +308,7 @@ router.get(Routes.accounts, getAllAccounts);
  *   
  *
  */
-router.post(Routes.addAccount, jsonParser, addAccount);
+router.post(Routes.addAccount, requireAuth, jsonParser, validate(validateAccount), addAccount);
 /**
  * @swagger
  * /delete_account:
@@ -328,7 +334,7 @@ router.post(Routes.addAccount, jsonParser, addAccount);
  *     
  *        
  */
-router.delete(`${Routes.deleteAccount}`, deleteAccount);
+router.delete(`${Routes.deleteAccount}`, requireAuth, deleteAccount);
 
 /**
  * @swagger
@@ -358,10 +364,29 @@ router.delete(`${Routes.deleteAccount}`, deleteAccount);
  *   
  *
  */
-router.post(Routes.updateAccount, jsonParser, updateAccount);
-router.get(Routes.searchAccount, searchAccount);
-router.post(Routes.register_vendors, jsonParser, vendorRegistration);
-router.post(Routes.logIn_vendor, jsonParser, vendorLogIn);
+router.post(Routes.updateAccount, requireAuth, jsonParser, validate(validateAccount), updateAccount);
+router.get(Routes.searchAccount, requireAuth, searchAccount);
+router.post(Routes.register_vendors, jsonParser, validate(validateVendorRegistration), vendorRegistration);
+router.post(Routes.logIn_vendor, jsonParser, validate(validateVendorLogin), vendorLogIn);
 router.post(Routes.recovery_vendors, jsonParser, vendorRecoveryPass);
+
+router.get(Routes.sales, requireAuth, getSales);
+router.post(Routes.addSale, requireAuth, jsonParser, addSale);
+router.post(Routes.updateSale, requireAuth, jsonParser, updateSale);
+router.delete(Routes.deleteSale, requireAuth, deleteSale);
+router.get(Routes.providers, requireAuth, getProviders);
+router.post(Routes.addProvider, requireAuth, jsonParser, addProvider);
+router.post(Routes.updateProvider, requireAuth, jsonParser, updateProvider);
+router.delete(Routes.deleteProvider, requireAuth, deleteProvider);
+router.get(Routes.incidents, requireAuth, getIncidents);
+router.post(Routes.addIncident, requireAuth, jsonParser, addIncident);
+router.post(Routes.updateIncident, requireAuth, jsonParser, updateIncident);
+router.delete(Routes.deleteIncident, requireAuth, deleteIncident);
+router.get(Routes.products, requireAuth, getProducts);
+router.post(Routes.addProduct, requireAuth, jsonParser, addProduct);
+router.post(Routes.updateProduct, requireAuth, jsonParser, updateProduct);
+router.delete(Routes.deleteProduct, requireAuth, deleteProduct);
+router.get(Routes.businessSummary, requireAuth, getBusinessSummary);
+router.get(Routes.clientHistory, requireAuth, getClientHistory);
 
 export default router;

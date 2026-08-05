@@ -9,4 +9,9 @@ node_modules/
 *.lock
 .env
 *.env.*
+!.env.example
 serviceAccountKey.json
+src/serviceKey.json
+web/.angular/
+web/src/**/*.js
+web/src/**/*.js.map

@@ -20,7 +20,25 @@ enum Routes {
   // auth vendors
   register_vendors = '/sign_in_vendors',
   logIn_vendor ='/log_in_vendors',
-  recovery_vendors = '/recovery_vendors'
+  recovery_vendors = '/recovery_vendors',
+  sales = '/sales',
+  addSale = '/new_sale',
+  updateSale = '/update_sale',
+  deleteSale = '/delete_sale',
+  providers = '/providers',
+  addProvider = '/new_provider',
+  updateProvider = '/update_provider',
+  deleteProvider = '/delete_provider',
+  incidents = '/incidents',
+  addIncident = '/new_incident',
+  updateIncident = '/update_incident',
+  deleteIncident = '/delete_incident',
+  products = '/products',
+  addProduct = '/new_product',
+  updateProduct = '/update_product',
+  deleteProduct = '/delete_product',
+  businessSummary = '/business_summary',
+  clientHistory = '/client_history'
 }
 
 export default Routes;

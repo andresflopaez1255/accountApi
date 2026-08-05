@@ -5,20 +5,34 @@ import { Account } from '../Interfaces';
 
 
 
-function formatAccountMessage(data: any) {
+type DeliveryData = { usuario: string; clave: string; perfil?: string; pin?: string; vence?: string; servicio?: string; tipoCuenta?: string; juego?: string; };
 
-	return (
+function formatAccountMessage(data: DeliveryData) {
+	const isFullAccount = /cuenta[_\s-]*completa|completa/i.test(data.perfil || '');
+	if (isFullAccount) return formatFullStreamingAccount(data);
+	return formatStreamingProfile(data);
+}
 
-		`👤 *Usuario:* ${data.usuario}\n` +
-		`🔑 *Clave:* ${data.clave}\n` +
-		`📺 *Perfil:* ${data.perfil}\n` +
-		`📌 *PIN:* ${data.pin}\n` +
-		`⏰ *Vence:* ${data.vence}\n\n` +
-		'📜 *Reglas para mantener la garantía:*\n' +
-		'⚠ Puedes usar solo (1) dispositivo\n' +
-		'⚠ Si se usa en más dispositivos puedes perder la garantía, sin derecho a devolución de dinero.\n\n' +
-		'☝😊 De esta manera podemos seguir brindándote el mejor servicio'
-	);
+function formatStreamingProfile(data: DeliveryData) {
+	const pinLine = data.pin ? `📌 *PIN:* ${data.pin}\n` : '';
+	return `¡Hola! 👋 Aquí tienes los datos de tu servicio. A disfrutar: 🍿\n\n` +
+		`👤 *Usuario:* ${data.usuario}\n🔑 *Clave:* ${data.clave}\n📺 *Perfil:* ${data.perfil || 'Principal'}\n${pinLine}⏰ *Vence:* ${data.vence || 'Por confirmar'}\n\n` +
+		`📜 *Reglas para mantener tu garantía:*\n⚠️ Usa solo (1) dispositivo al mismo tiempo.\n⚠️ No modifiques la contraseña, el nombre del perfil ni el PIN.\n⚠️ Si se detecta uso en más dispositivos o cambios en la cuenta, se perderá la garantía sin derecho a devolución.\n\n☝️😊 Ayúdanos a cumplir estas reglas para poder seguir brindándote el mejor servicio. ¡Que lo disfrutes!`;
+}
+
+function formatFullStreamingAccount(data: DeliveryData) {
+	return `¡Hola! 👋 Aquí tienes los datos de tu cuenta completa. ¡Todo listo para maratonear! 👑🍿\n\n` +
+		`📺 *Servicio:* ${data.servicio || 'Streaming'}\n👤 *Usuario (Correo):* ${data.usuario}\n🔑 *Clave:* ${data.clave}\n⏰ *Vence:* ${data.vence || 'Por confirmar'}\n\n` +
+		`📜 *Reglas para mantener tu garantía:*\n⚠️ La cuenta es toda tuya para crear los perfiles que quieras.\n⚠️ Por seguridad y para mantener la garantía, NO cambies el correo ni la contraseña principal de la cuenta.\n\n☝️😊 Cualquier duda que tengas, aquí estamos. ¡Que la disfrutes al máximo!`;
+}
+
+function formatDigitalGame(data: DeliveryData) {
+	const secondary = /secundaria/i.test(data.tipoCuenta || '') ? '\n⚠️ Recuerda que para jugar debes hacerlo siempre desde este perfil y con conexión a internet.' : '';
+	return `¡Hola! 👋 Todo listo para jugar. 🎮 Aquí tienes los datos de tu nuevo juego:\n\n🕹️ *Juego:* ${data.juego || data.servicio || 'Juego digital'}\n👤 *Correo:* ${data.usuario}\n🔑 *Clave:* ${data.clave}\n⚙️ *Tipo de cuenta:* ${data.tipoCuenta || 'Principal'}\n\n📜 *Instrucciones y Garantía:*\n⚠️ NO cambies el correo, la contraseña ni el ID de la cuenta. Hacerlo anula la garantía de inmediato.\n⚠️ Pon a descargar el juego desde la biblioteca y no borres este usuario de tu consola.${secondary}\n\n☝️😊 ¡A romperla! Avísanos si necesitas ayuda con la instalación.`;
+}
+
+function formatGameSubscription(data: DeliveryData) {
+	return `¡Hola! 👋 Tu consola está lista para el siguiente nivel. 🚀 Aquí tienes tu suscripción:\n\n🟢/🔵 *Suscripción:* ${data.servicio || 'Suscripción'}\n👤 *Correo:* ${data.usuario}\n🔑 *Clave:* ${data.clave}\n⏰ *Vence:* ${data.vence || 'Por confirmar'}\n\n📜 *Instrucciones y Garantía:*\n⚠️ NO cambies los datos de acceso (correo/contraseña). Esto anulará tu garantía.\n⚠️ Activa esta cuenta como "Principal" (PS5) o "Xbox Principal" en tu consola para que los beneficios de jugar online y los juegos se compartan con tu perfil personal.\n\n☝️😊 Si tienes alguna duda de cómo activarla, escríbenos y te guiamos paso a paso. ¡A jugar!`;
 }
 
 /**
@@ -123,4 +137,4 @@ function updateTemplateFromObject(template:string, data:Account) {
 
 
 
-export { formatAccountMessage, parseAccountText,updateTemplateFromObject };
+export { formatAccountMessage, formatStreamingProfile, formatFullStreamingAccount, formatDigitalGame, formatGameSubscription, parseAccountText,updateTemplateFromObject };
