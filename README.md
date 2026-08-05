@@ -5,7 +5,7 @@ API en TypeScript para gestionar clientes, cuentas de streaming, categorías y v
 ## Configuración
 
 1. Copia `.env.example` a `.env` y completa las variables.
-2. Proporciona una cuenta de servicio de Firebase mediante `FIREBASE_CONFIG`, `FIREBASE_SERVICE_ACCOUNT_PATH`, `FIREBASE_SERVICE_ACCOUNT_JSON` o `GOOGLE_APPLICATION_CREDENTIALS`.
+2. En Render, usa preferiblemente `FIREBASE_SERVICE_ACCOUNT_BASE64`: codifica el archivo descargado con `base64 -i src/serviceKey.json | tr -d '\n'` y pega el resultado como valor. También se aceptan `FIREBASE_CONFIG`, `FIREBASE_SERVICE_ACCOUNT_PATH`, `FIREBASE_SERVICE_ACCOUNT_JSON` o `GOOGLE_APPLICATION_CREDENTIALS`.
 3. Instala dependencias con `npm install` y ejecuta `npm run dev`.
 
 `JWT_SECRET` es obligatorio para iniciar sesión y consumir las rutas de negocio. Genera un valor aleatorio largo; nunca lo subas al repositorio. El bot es opcional y solo se inicia si `BOT_TOKEN` está configurado. Para usar webhooks, establece también `BOT_WEBHOOK_URL`.

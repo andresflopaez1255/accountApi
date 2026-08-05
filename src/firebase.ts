@@ -5,13 +5,22 @@ import {getMessaging}  from 'firebase-admin/messaging'
 import { getAuth } from 'firebase-admin/auth';
 import 'dotenv/config';
 
-const inlineServiceAccount = process.env.FIREBASE_CONFIG || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-const serviceAccount = inlineServiceAccount
-	? JSON.parse(inlineServiceAccount)
-	: process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+const parseServiceAccount = () => {
+	const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+	if (base64) return JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+	const inline = process.env.FIREBASE_CONFIG || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+	if (!inline) return process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+	try {
+		return JSON.parse(inline.trim());
+	} catch (_error) {
+		throw new Error('Firebase service-account JSON is invalid. On Render, prefer FIREBASE_SERVICE_ACCOUNT_BASE64 to avoid quote and newline errors.');
+	}
+};
+
+const serviceAccount = parseServiceAccount();
 
 if (!serviceAccount && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-	throw new Error('Firebase credentials are required. Set FIREBASE_CONFIG, FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS.');
+	throw new Error('Firebase credentials are required. Set FIREBASE_SERVICE_ACCOUNT_BASE64, FIREBASE_CONFIG, FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS.');
 }
 
 initializeApp({
